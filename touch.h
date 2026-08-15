@@ -11,18 +11,22 @@
 
 enum TouchEvent {
   TOUCH_NONE,
+  TOUCH_PRESS_DOWN,
   TOUCH_SINGLE_TAP,
   TOUCH_DOUBLE_TAP,
-  TOUCH_LONG_PRESS
+  TOUCH_LONG_PRESS,
+  TOUCH_HOLD_3SEC
 };
 
 static bool _touchWasPressed = false;
 static unsigned long _touchPressedAt = 0;
 static bool _longPressFired = false;
+static bool _hold3SecFired = false;
 static int _pendingTapCount = 0;
 static unsigned long _pendingTapWindowEnds = 0;
 
 static const unsigned long TOUCH_LONG_PRESS_MS = 1200;
+static const unsigned long TOUCH_HOLD_3SEC_MS   = 3000;
 static const unsigned long TOUCH_DOUBLE_TAP_WINDOW_MS = 350;
 
 inline void touch_init() {
@@ -37,13 +41,19 @@ inline TouchEvent touch_update() {
   TouchEvent result = TOUCH_NONE;
 
   if (pressed && !_touchWasPressed) {
-    // Just pressed down.
+    // Just pressed down — emit TOUCH_PRESS_DOWN instantly for 0ms latency!
     _touchPressedAt = now;
     _longPressFired = false;
+    _hold3SecFired = false;
+    result = TOUCH_PRESS_DOWN;
 
   } else if (pressed && _touchWasPressed) {
-    // Still held — check if it's crossed the long-press threshold.
-    if (!_longPressFired && (now - _touchPressedAt) >= TOUCH_LONG_PRESS_MS) {
+    // Still held — check 3-second continuous hold threshold first
+    if (!_hold3SecFired && (now - _touchPressedAt) >= TOUCH_HOLD_3SEC_MS) {
+      _hold3SecFired = true;
+      _pendingTapCount = 0;
+      result = TOUCH_HOLD_3SEC;
+    } else if (!_longPressFired && (now - _touchPressedAt) >= TOUCH_LONG_PRESS_MS) {
       _longPressFired = true;
       _pendingTapCount = 0; // a long press cancels any tap counting in progress
       result = TOUCH_LONG_PRESS;
@@ -52,7 +62,7 @@ inline TouchEvent touch_update() {
   } else if (!pressed && _touchWasPressed) {
     // Just released. If this wasn't already consumed as a long press,
     // count it as a tap and start/extend the double-tap window.
-    if (!_longPressFired) {
+    if (!_longPressFired && !_hold3SecFired) {
       _pendingTapCount++;
       _pendingTapWindowEnds = now + TOUCH_DOUBLE_TAP_WINDOW_MS;
     }

@@ -62,6 +62,7 @@ enum EyeMood {
   MOOD_EXCITED,
   MOOD_SHOCKED,
   MOOD_CONFUSED,
+  MOOD_EATING,
   MOOD_COUNT // sentinel — always last, gives the table its size
 };
 
@@ -78,6 +79,12 @@ static int _doodleW = SCREEN_WIDTH;
 static int _doodleH = SCREEN_HEIGHT;
 static bool _doodleValid = false;
 
+static float _globalExpressionIntensity = 1.0f; // 0.0 to 1.0 intensity scaler
+
+void faces_setIntensity(float intensity) {
+  _globalExpressionIntensity = intensity < 0.0f ? 0.0f : (intensity > 1.0f ? 1.0f : intensity);
+}
+
 void faces_init(Adafruit_SH1106G* display) {
   _disp = display;
   _disp->setTextColor(SH110X_WHITE);
@@ -86,29 +93,17 @@ void faces_init(Adafruit_SH1106G* display) {
 // ---------------------------------------------------------------------------
 // Layout
 // ---------------------------------------------------------------------------
-static const int EYE_W_DEFAULT = 38;
-static const int EYE_H_DEFAULT = 36;
-static const int EYE_RADIUS    = 9;
-static const int EYE_GAP       = 8;
-static const int EYE_CENTER_Y  = 27;
-static const int BROW_GAP_ABOVE_EYE = 5;
-static const int MOUTH_Y       = 55;
+static const int EYE_W_DEFAULT = 28;
+static const int EYE_H_DEFAULT = 24;
+static const int EYE_RADIUS    = 7;
+static const int EYE_GAP       = 12;
+static const int EYE_CENTER_Y  = 31;
+static const int BROW_GAP_ABOVE_EYE = 6;
+static const int MOUTH_Y       = 54;
 
 // ---------------------------------------------------------------------------
 // Mood table — one row per EyeMood. This is the entire "personality" of
 // each expression; nothing elsewhere needs to change to add a mood.
-//   height      : eye height multiplier (1.0 = normal, <1 = squinted/heavy)
-//   innerCut    : 0..1 diagonal bite out of inner-top corners (furrowed/angry)
-//   outerCut    : 0..1 diagonal bite out of outer-top corners (droopy/sad)
-//   smileCut    : 0..1 circular bite out of the bottom (curved "smiling eye")
-//   browAmt     : 0..1 how visible the eyebrows are (0 = hidden entirely)
-//   browInnerY  : eyebrow inner-end vertical offset
-//   browOuterY  : eyebrow outer-end vertical offset
-//   browAsym    : -1..1, +ve raises the right brow / lowers the left
-//                 (the classic single-raised-eyebrow "curious/skeptical" look)
-//   eyeAsym     : -1..1, +ve makes the right eye slightly larger than left
-//   blush       : 0..1 blush hatch density
-//   mouthCurve  : -1 (frown) .. 0 (flat) .. +1 (smile)
 // ---------------------------------------------------------------------------
 struct MoodTargets {
   float height, innerCut, outerCut, smileCut;
@@ -117,7 +112,7 @@ struct MoodTargets {
 };
 
 static const MoodTargets _MOOD_TABLE[MOOD_COUNT] = {
-  /* DEFAULT     */ { 1.00f, 0.0f, 0.0f, 0.0f,  0.8f, -2, -1,  0.0f, 0.0f, 0.0f,  0.15f },
+  /* DEFAULT     */ { 1.00f, 0.0f, 0.0f, 0.0f,  0.8f, -2, -1,  0.0f, 0.0f, 0.0f,  0.25f },
   /* HAPPY       */ { 0.85f, 0.0f, 0.0f, 1.0f,  0.8f, -3, -2,  0.0f, 0.0f, 1.0f,  1.00f },
   /* ANGRY       */ { 0.85f, 1.0f, 0.0f, 0.0f,  1.0f,  4, -2,  0.0f, 0.0f, 0.0f, -0.20f },
   /* SAD         */ { 0.75f, 0.0f, 1.0f, 0.0f,  1.0f, -3,  3,  0.0f, 0.0f, 0.0f, -0.70f },
@@ -138,6 +133,7 @@ static const MoodTargets _MOOD_TABLE[MOOD_COUNT] = {
   /* EXCITED     */ { 1.15f, 0.0f, 0.0f, 0.90f, 0.8f, -4, -2,  0.0f, 0.0f, 1.0f,  1.20f },
   /* SHOCKED     */ { 1.30f, 0.0f, 0.0f, 0.0f,  0.9f, -5, -5,  0.0f, 0.0f, 0.0f,  0.00f },
   /* CONFUSED    */ { 0.95f, 0.0f, 0.2f, 0.0f,  0.8f, -4,  2,  0.9f, 0.3f, 0.0f, -0.30f },
+  /* EATING      */ { 0.85f, 0.0f, 0.0f, 0.50f, 0.8f, -2, -1,  0.0f, 0.0f, 0.8f,  0.60f },
 };
 
 // ---------------------------------------------------------------------------
@@ -242,6 +238,13 @@ void _drawOneEye(int cx, int cy, float height, float innerCut, float outerCut,
     int radius = (int)(smileCut * (h * 0.65f));
     _disp->fillCircle(cx, y + h, radius, SH110X_BLACK);
   }
+
+  // Specular Pupil & Catchlight Reflection for organic eye depth
+  if (h >= 12 && smileCut < 0.5f && innerCut < 0.5f) {
+    int pupilR = 4;
+    _disp->fillCircle(cx, cy, pupilR, SH110X_BLACK);
+    _disp->drawPixel(cx - 1, cy - 1, SH110X_WHITE); // Specular eye catchlight reflection
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -302,46 +305,45 @@ void _drawBlush(int leftCx, int rightCx, int cy) {
 // ---------------------------------------------------------------------------
 // Mouth - rich connected mouth contour with open smile cavity & dimples
 // ---------------------------------------------------------------------------
-void _drawMouth(float curvature, int width = 14) {
+void _drawMouth(float curvature, int width = 11) {
   int cx = SCREEN_WIDTH / 2;
 
-  // Open mouth for big happy smiles (when curvature > 0.45)
+  // Open mouth cavity with teeth line & tongue for big happy/excited smiles
   if (curvature > 0.45f) {
     int h = (int)(curvature * 8.0f);
     int topY = MOUTH_Y - 2;
     _disp->fillRoundRect(cx - width, topY, width * 2, h + 4, 4, SH110X_WHITE);
     _disp->fillRoundRect(cx - width + 2, topY + 2, (width - 2) * 2, h, 3, SH110X_BLACK);
-    _disp->fillRoundRect(cx - 3, topY + h - 1, 6, 4, 2, SH110X_WHITE);
+    
+    // Teeth line (white bar across top of open mouth cavity)
+    _disp->drawFastHLine(cx - width + 4, topY + 2, (width - 4) * 2, SH110X_WHITE);
+    
+    // Tongue curve at bottom
+    _disp->fillRoundRect(cx - 4, topY + h - 1, 8, 4, 2, SH110X_WHITE);
     return;
   }
 
-  // 2px thick expressive curved mouth contour with dimple corner ticks
+  // Thick 3-4px rounded U-smile arc matching reference image
   int prevX = 0, prevY = 0;
   bool havePrev = false;
 
   for (int dx = -width; dx <= width; dx++) {
     float t = (float)(width - abs(dx)) / (float)width; // 0 at ends, 1 at center
     int x = cx + dx;
-    int y = MOUTH_Y + (int)(-curvature * t * 6.0f);
+    int y = MOUTH_Y + (int)(-curvature * t * 5.0f);
 
     if (havePrev) {
+      // 3px-4px thick stroke for thick rounded U-smile matching reference image
       _disp->drawLine(prevX, prevY, x, y, SH110X_WHITE);
       _disp->drawLine(prevX, prevY + 1, x, y + 1, SH110X_WHITE);
+      _disp->drawLine(prevX, prevY + 2, x, y + 2, SH110X_WHITE);
+      if (abs(dx) <= width - 2) {
+        _disp->drawLine(prevX, prevY + 3, x, y + 3, SH110X_WHITE);
+      }
     }
     prevX = x;
     prevY = y;
     havePrev = true;
-  }
-
-  // Realistic corner dimple ticks at mouth ends
-  int leftY = MOUTH_Y;
-  int rightY = MOUTH_Y;
-  if (curvature > 0.1f) {
-    _disp->drawLine(cx - width, leftY, cx - width - 1, leftY - 2, SH110X_WHITE);
-    _disp->drawLine(cx + width, rightY, cx + width + 1, rightY - 2, SH110X_WHITE);
-  } else if (curvature < -0.1f) {
-    _disp->drawLine(cx - width, leftY - 2, cx - width - 1, leftY, SH110X_WHITE);
-    _disp->drawLine(cx + width, rightY - 2, cx + width + 1, rightY, SH110X_WHITE);
   }
 }
 
@@ -456,37 +458,130 @@ void _drawWipeText(const char* text, int x, int y, float localT, uint8_t textSiz
 
 inline float _clamp01(float v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 
+// 12x18 Rocket Sprite Bitmaps
+static const uint8_t PROGMEM rocket_bitmap[] = {
+  0x06, 0x00, //      ##
+  0x0F, 0x00, //     ####
+  0x1F, 0x80, //    ######
+  0x1F, 0x80, //    ######
+  0x19, 0x80, //    ##  ##
+  0x19, 0x80, //    ##  ##
+  0x1F, 0x80, //    ######
+  0x1F, 0x80, //    ######
+  0x3F, 0xC0, //   ########
+  0x7F, 0xE0, //  ##########
+  0xFF, 0xF0, // ############
+  0xDF, 0xB0, // ## ###### ##
+  0x9F, 0x90, // #  ######  #
+  0x8F, 0x10, // #   ####   #
+  0x06, 0x00  //      ##
+};
+
 void faces_playBootIntro() {
-  const unsigned long DURATION = 3200;
+  const unsigned long DURATION = 6500;
   unsigned long start = millis();
+
+  // Particle structure for launch pad smoke billows
+  struct SmokePuff { int x, y, maxR; };
+  SmokePuff smoke[14];
+  for (int i = 0; i < 14; i++) {
+    smoke[i].x = random(10, 118);
+    smoke[i].y = random(46, 64);
+    smoke[i].maxR = random(6, 20);
+  }
 
   while (millis() - start < DURATION) {
     unsigned long elapsed = millis() - start;
     float t = (float)elapsed / DURATION;
 
     _disp->clearDisplay();
-    _drawParticles(elapsed);
 
-    float line1T = _clamp01((t - 0.00f) / 0.30f);
-    float line2T = _clamp01((t - 0.22f) / 0.35f);
-    float line3T = _clamp01((t - 0.60f) / 0.35f);
+    // 1. Rocket position calculation (ignition at pad -> blast off)
+    int rocketX = (SCREEN_WIDTH - 12) / 2; // centered at x = 58
+    int rocketY;
 
-    _drawWipeText("Hello, I am", 4, 6, line1T, 1);
-    _drawWipeText("best Company", 4, 22, line2T, 1);
-    _drawWipeText("NANA", 4, 34, line2T, 2);
-    _drawWipeText("by AJR Group", 18, SCREEN_HEIGHT - 10, line3T, 1);
+    if (t < 0.20f) {
+      // Stage 1: Engine ignition rumble & smoke puff
+      rocketY = 40 + random(-1, 2); // slight pad vibration
+      #if defined(SPEAKER_PIN)
+      tone(SPEAKER_PIN, 120 + (int)(t * 800), 20);
+      #endif
+    } else if (t < 0.50f) {
+      // Stage 2: Blast Off accelerate upward
+      float launchT = (t - 0.20f) / 0.30f;
+      rocketY = 40 - (int)(launchT * launchT * 80); // parabolic acceleration up to y = -40
+      #if defined(SPEAKER_PIN)
+      tone(SPEAKER_PIN, 350 + (int)(launchT * 900), 20);
+      #endif
+    } else {
+      // Stage 3: Rocket launched off screen
+      rocketY = -40;
+    }
+
+    // 2. Draw Flame Trail when rocket is launching
+    if (t >= 0.10f && rocketY > -20) {
+      int flameH = random(8, 16);
+      _disp->fillTriangle(rocketX + 3, rocketY + 18,
+                          rocketX + 9, rocketY + 18,
+                          rocketX + 6, rocketY + 18 + flameH, SH110X_WHITE);
+    }
+
+    // 3. Draw Rocket Sprite
+    if (rocketY > -20) {
+      _disp->drawBitmap(rocketX, rocketY, rocket_bitmap, 12, 18, SH110X_WHITE);
+    }
+
+    // 4. Draw Expanding Smoke Particle Billows
+    for (int i = 0; i < 14; i++) {
+      float smokeT = _clamp01((t - 0.08f) / 0.65f);
+      if (smokeT > 0.0f) {
+        int currentR = (int)(smoke[i].maxR * smokeT);
+        int smokeY = smoke[i].y - (int)(smokeT * 12);
+        if (smokeT < 0.5f) {
+          _disp->fillCircle(smoke[i].x, smokeY, currentR, SH110X_WHITE);
+        } else {
+          // Dissipate into smoke wisps
+          _disp->drawCircle(smoke[i].x, smokeY, currentR, SH110X_WHITE);
+        }
+      }
+    }
+
+    // 5. Brand Name Text Reveal from Smoke (Stage 3)
+    if (t >= 0.30f) {
+      float textT = _clamp01((t - 0.30f) / 0.40f);
+
+      // Centered Brand Title "NANA" (Size 2: 4 chars * 12px = 48px -> x = 40)
+      _disp->setTextSize(2);
+      _drawWipeText("NANA", 40, 8, textT, 2);
+
+      // Subtitles
+      _drawWipeText("Your best Companion", 7, 30, _clamp01((t - 0.42f) / 0.35f), 1);
+      _drawWipeText("POWERED BY AJRGROUPS", 4, 46, _clamp01((t - 0.55f) / 0.30f), 1);
+
+      #if defined(SPEAKER_PIN)
+      static bool chimePlayed = false;
+      if (t > 0.50f && !chimePlayed) {
+        chimePlayed = true;
+        tone(SPEAKER_PIN, 880, 100);
+        delay(80);
+        tone(SPEAKER_PIN, 1046, 100);
+        delay(80);
+        tone(SPEAKER_PIN, 1318, 150);
+      }
+      #endif
+    }
 
     _disp->display();
-    delay(100);
+    delay(20);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Boot sequence, stage 2: waving/handshake hand with a "Hi" greeting.
+// Boot sequence, stage 2: waving/handshake hand with a sales companion greeting.
 // ---------------------------------------------------------------------------
 void _drawWaveHand(int shear) {
   int cx = SCREEN_WIDTH / 2;
-  int cy = SCREEN_HEIGHT / 2 - 4;
+  int cy = SCREEN_HEIGHT / 2 + 2;
   _disp->fillRoundRect(cx - 10 + shear / 2, cy - 4, 20, 22, 6, SH110X_WHITE);
   _disp->fillRect(cx - 6 + shear / 2, cy + 16, 12, 10, SH110X_WHITE);
   for (int i = 0; i < 4; i++) {
@@ -504,17 +599,51 @@ void faces_drawWave() {
 }
 
 void faces_playBootHandshake() {
-  const unsigned long DURATION = 1800;
+  const unsigned long DURATION = 7500;
   unsigned long start = millis();
   while (millis() - start < DURATION) {
-    unsigned long now = millis();
-    float rock = sin(now / 180.0) * 10.0f;
+    unsigned long elapsed = millis() - start;
+    float rock = sin(elapsed / 180.0) * 10.0f;
 
     _disp->clearDisplay();
-    _drawWaveHand((int)rock);
-    _disp->setTextSize(2);
-    _disp->setCursor(SCREEN_WIDTH / 2 - 12, 4);
-    _disp->print("Hi");
+
+    if (elapsed < 2500) {
+      // Slide 1: Personalized Greeting - Hi Jayakumar ✨
+      _drawWaveHand((int)rock);
+
+      // Draw Glitter Sparkling Stars around Hi Jayakumar
+      int starFrame = (elapsed / 150) % 2;
+      if (starFrame == 0) {
+        _disp->drawPixel(6, 6, SH110X_WHITE); _disp->drawPixel(122, 6, SH110X_WHITE);
+        _disp->drawPixel(8, 16, SH110X_WHITE); _disp->drawPixel(120, 16, SH110X_WHITE);
+      } else {
+        _disp->drawPixel(8, 4, SH110X_WHITE); _disp->drawPixel(120, 4, SH110X_WHITE);
+        _disp->drawPixel(6, 18, SH110X_WHITE); _disp->drawPixel(122, 18, SH110X_WHITE);
+      }
+
+      // Bold Customer Greeting Header
+      _disp->setTextSize(1);
+      _disp->setCursor(14, 4);
+      _disp->print("Hi Jayakumar ");
+      _disp->print(starFrame == 0 ? "*" : "+"); // Glitter symbol
+    } else if (elapsed < 5000) {
+      // Slide 2: Sales pitch - Smart Desktop AI Companion
+      _disp->setTextSize(1);
+      _disp->setCursor(10, 14);
+      _disp->println("Your Smart Desktop");
+      _disp->setCursor(22, 32);
+      _disp->println("AI Companion!");
+    } else {
+      // Slide 3: Sales pitch - Entertain, Assist & Remind On Time!
+      _disp->setTextSize(1);
+      _disp->setCursor(4, 8);
+      _disp->println("Entertain & Assist");
+      _disp->setCursor(8, 24);
+      _disp->println("& Remind You On");
+      _disp->setCursor(22, 40);
+      _disp->println("Right Time!");
+    }
+
     _disp->display();
     delay(30);
   }
@@ -615,15 +744,12 @@ void faces_drawExpression(EyeMood mood) {
     _disp->drawCircleHelper(SCREEN_WIDTH / 2 + 4, MOUTH_Y - 3, 5, 8, SH110X_WHITE);
 
   } else if (mood == MOOD_LOVING) {
-    // Floating hearts
-    bool pulse = (now % 600) < 300;
-    if (pulse) {
-      _drawHeart(12, 8, 4);
-      _drawHeart(SCREEN_WIDTH - 12, 8, 4);
-    }
-    _drawHeart(leftCx, EYE_CENTER_Y, 8);
-    _drawHeart(rightCx, EYE_CENTER_Y, 8);
-    _drawMouth(_curMouthCurve);
+    // Image 1: Dual heart eyes
+    _disp->fillRect(leftCx - EYE_W_DEFAULT / 2 - 1, EYE_CENTER_Y - EYE_H_DEFAULT / 2 - 1, EYE_W_DEFAULT + 2, EYE_H_DEFAULT + 2, SH110X_BLACK);
+    _disp->fillRect(rightCx - EYE_W_DEFAULT / 2 - 1, EYE_CENTER_Y - EYE_H_DEFAULT / 2 - 1, EYE_W_DEFAULT + 2, EYE_H_DEFAULT + 2, SH110X_BLACK);
+    _drawHeart(leftCx, EYE_CENTER_Y, 9);
+    _drawHeart(rightCx, EYE_CENTER_Y, 9);
+    _drawMouth(0.5f);
 
   } else if (mood == MOOD_WINK) {
     // Winking left eye (cute curved arc)
@@ -697,6 +823,15 @@ void faces_drawExpression(EyeMood mood) {
       _disp->fillCircle(leftCx - 8, EYE_CENTER_Y + 8 + tearY, 2, SH110X_WHITE);
     }
     _drawMouth(_curMouthCurve);
+
+  } else if (mood == MOOD_EATING) {
+    // Chewing rhythmic animation with puffed cheeks
+    float chew = sin(now / 110.0f);
+    int mouthW = 10 + (int)(chew * 4.0f);
+    _drawMouth(0.6f + chew * 0.3f, mouthW);
+    if ((now % 400) < 200) {
+      _disp->fillCircle(SCREEN_WIDTH / 2 + 16, MOUTH_Y + 2, 2, SH110X_WHITE);
+    }
 
   } else {
     _drawMouth(_curMouthCurve);
@@ -823,17 +958,23 @@ void faces_drawClock() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo, 100)) {
     _disp->setTextSize(1);
-    _disp->setCursor(0, SCREEN_HEIGHT / 2 - 4);
+    _disp->setCursor((SCREEN_WIDTH - 84) / 2, SCREEN_HEIGHT / 2 - 4);
     _disp->println("Syncing time...");
     _disp->display();
     return;
   }
 
-  // 1. Date (e.g. "15-08-2026")
+  // 1. Format Strings
   char dateBuf[16];
   strftime(dateBuf, sizeof(dateBuf), "%d-%m-%Y", &timeinfo);
 
-  // 2. City Location (truncated to 10 chars max to prevent overlap)
+  char weatherBuf[20];
+  if (_weatherData.valid) {
+    snprintf(weatherBuf, sizeof(weatherBuf), "%dC %s", _weatherData.tempC, _weatherData.condition);
+  } else {
+    snprintf(weatherBuf, sizeof(weatherBuf), "--C Clear");
+  }
+
   char cityBuf[12];
   if (_weatherData.valid && strlen(_weatherData.city) > 0) {
     snprintf(cityBuf, sizeof(cityBuf), "%.10s", _weatherData.city);
@@ -841,49 +982,66 @@ void faces_drawClock() {
     snprintf(cityBuf, sizeof(cityBuf), "Local");
   }
 
-  // 3. Weather Temp & Condition (e.g. "28C Clear")
-  char weatherBuf[20];
-  if (_weatherData.valid) {
-    snprintf(weatherBuf, sizeof(weatherBuf), "%dC %s", _weatherData.tempC, _weatherData.condition);
+  bool use24h = settings_get().use24HourFormat;
+  char mainTimeBuf[8];
+  char secBuf[8];
+  char ampmBuf[4] = "";
+
+  if (use24h) {
+    strftime(mainTimeBuf, sizeof(mainTimeBuf), "%H:%M", &timeinfo);
+    strftime(secBuf, sizeof(secBuf), ":%S", &timeinfo);
   } else {
-    snprintf(weatherBuf, sizeof(weatherBuf), "--C Weather");
+    strftime(mainTimeBuf, sizeof(mainTimeBuf), "%I:%M", &timeinfo);
+    strftime(secBuf, sizeof(secBuf), ":%S", &timeinfo);
+    strftime(ampmBuf, sizeof(ampmBuf), "%p", &timeinfo);
   }
 
-  // Row 1 (y = 2): Date (Left) & City Location (Right) — Cleanly separated!
+  // Row 1 (y = 2): Date (Left) & Weather (Right)
   _disp->setTextSize(1);
   _disp->setCursor(2, 2);
   _disp->print(dateBuf);
 
   int16_t bx, by; uint16_t bw, bh;
-  _disp->getTextBounds(cityBuf, 0, 0, &bx, &by, &bw, &bh);
+  _disp->getTextBounds(weatherBuf, 0, 0, &bx, &by, &bw, &bh);
   _disp->setCursor(SCREEN_WIDTH - (int)bw - 2, 2);
-  _disp->print(cityBuf);
-
-  // Row 2 (y = 13): Weather Temp & Condition (Left-aligned)
-  _disp->setCursor(2, 13);
   _disp->print(weatherBuf);
 
-  // Horizontal Separator (y = 24)
-  _disp->drawLine(0, 24, SCREEN_WIDTH, 24, SH110X_WHITE);
+  // Horizontal Separator (y = 12)
+  _disp->drawLine(0, 12, SCREEN_WIDTH, 12, SH110X_WHITE);
 
-  // Row 3 (y = 34..54): Time with AM/PM indicator in a clean centered status box
-  char timeStr[16];
-  bool use24h = settings_get().use24HourFormat;
-  if (use24h) {
-    strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
-  } else {
-    strftime(timeStr, sizeof(timeStr), "%I:%M:%S %p", &timeinfo);
+  // Main Hero Clock Row (y = 17..33): Large HH:MM in Size 2
+  _disp->setTextSize(2);
+  _disp->getTextBounds(mainTimeBuf, 0, 0, &bx, &by, &bw, &bh);
+  int clockX = 10;
+  int clockY = 17;
+  _disp->setCursor(clockX, clockY);
+  _disp->print(mainTimeBuf);
+
+  // Seconds & AM/PM Badges to the right of main time (x = clockX + bw + 6)
+  _disp->setTextSize(1);
+  int badgeX = clockX + (int)bw + 6;
+
+  // Draw Seconds
+  _disp->setCursor(badgeX, clockY);
+  _disp->print(secBuf);
+
+  // Draw AM/PM in a filled inverted badge if 12h format
+  if (!use24h && strlen(ampmBuf) > 0) {
+    _disp->fillRoundRect(badgeX, clockY + 9, 20, 10, 2, SH110X_WHITE);
+    _disp->setTextColor(SH110X_BLACK, SH110X_WHITE);
+    _disp->setCursor(badgeX + 3, clockY + 10);
+    _disp->print(ampmBuf);
+    _disp->setTextColor(SH110X_WHITE); // reset color
   }
 
-  _disp->getTextBounds(timeStr, 0, 0, &bx, &by, &bw, &bh);
-  int tx = (SCREEN_WIDTH - (int)bw) / 2;
-  if (tx < 4) tx = 4;
-  int ty = 36;
+  // Row 3 (y = 44..62): Sleek Bottom Card Frame for Location & Status
+  _disp->drawRoundRect(2, 44, SCREEN_WIDTH - 4, 18, 4, SH110X_WHITE);
+  _disp->setCursor(8, 49);
+  _disp->print("Loc: ");
+  _disp->print(cityBuf);
 
-  // Sleek status frame around time
-  _disp->drawRoundRect(tx - 5, ty - 4, (int)bw + 10, 18, 4, SH110X_WHITE);
-  _disp->setCursor(tx, ty);
-  _disp->print(timeStr);
+  _disp->setCursor(SCREEN_WIDTH - 38, 49);
+  _disp->print("NTPok");
 
   _disp->display();
 }
@@ -896,21 +1054,22 @@ void faces_drawSettingsMenu(int itemIndex) {
   _disp->setTextSize(1);
   _disp->setCursor(0, 0);
   _disp->println("SETTINGS (tap=next,");
-  _disp->println("2x tap=change, hold=save)");
+  _disp->println("2x tap=change/play, hold=save)");
   _disp->println("");
 
   ChotubotSettings &s = settings_get();
-  const char* labels[SETTINGS_ITEM_COUNT] = { "Idle timeout", "Time format", "Tap = show time" };
+  const char* labels[SETTINGS_ITEM_COUNT] = { "Idle timeout", "Time format", "Single tap", "Play Game" };
   String values[SETTINGS_ITEM_COUNT] = {
     String(s.idleTimeoutMinutes) + " min",
-    s.use24HourFormat ? "24-hour" : "12-hour",
-    s.singleTapAction == TAP_ACTION_SHOW_TIME ? "On" : "Off",
+    s.use24HourFormat ? "24h" : "12h",
+    s.singleTapAction == TAP_ACTION_SHOW_TIME ? "Time" : (s.singleTapAction == TAP_ACTION_PLAY_DINO ? "Game" : "Off"),
+    "Dino Run >"
   };
 
   for (int i = 0; i < SETTINGS_ITEM_COUNT; i++) {
-    _disp->print(i == itemIndex ? "> " : "  ");
+    _disp->print(i == itemIndex ? ">" : " ");
     _disp->print(labels[i]);
-    _disp->print(": ");
+    _disp->print(":");
     _disp->println(values[i]);
   }
 

@@ -53,6 +53,7 @@
 #include "settings.h"
 #include "touch.h"
 #include "faces.h"
+#include "dino_game.h"
 
 // ---------------------------------------------------------------------------
 // Globals
@@ -79,7 +80,8 @@ enum DeviceState {
   STATE_WAVE,
   STATE_GAME_READY,   // "get ready..." countdown, taps here = too soon
   STATE_GAME_GO,      // "GO!" — waiting for the reaction tap
-  STATE_GAME_RESULT   // shows the reaction time (or "too soon")
+  STATE_GAME_RESULT,  // shows the reaction time (or "too soon")
+  STATE_DINO_GAME     // Chrome Dino-style Elephant runner game
 };
 
 DeviceState currentState = STATE_BOOT;
@@ -120,6 +122,7 @@ void setup() {
   delay(200);
 
   Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
+  Wire.setClock(400000); // 400kHz Fast-Mode I2C bus speed for 8x faster OLED redraws
   if (!display.begin(SCREEN_I2C_ADDR, true)) {
     Serial.println("Display allocation failed — check wiring, I2C address, and driver chip (SSD1306 vs SH1106)");
     while (true) { delay(1000); } // halt here rather than run with an uninitialized display
@@ -136,6 +139,7 @@ void setup() {
   #if FEATURE_TOUCH
   touch_init();
   #endif
+  dino_initHardware();
 
   faces_init(&display);
 
@@ -165,19 +169,29 @@ void setup() {
 // Main loop
 // ---------------------------------------------------------------------------
 void loop() {
-  maintainWiFi();
-  maintainWeather();
-  #if FEATURE_FIREBASE
-  pushStatusPeriodically();
-  pollForCommands();
-  #endif
+  // Skip background network polling during active gameplay to eliminate HTTP stalls
+  if (currentState != STATE_DINO_GAME) {
+    maintainWiFi();
+    maintainWeather();
+    #if FEATURE_FIREBASE
+    pushStatusPeriodically();
+    pollForCommands();
+    #endif
+  }
+
   #if FEATURE_TOUCH
   handleTouchEvent(touch_update());
   #endif
   updateStateMachine();
   renderCurrentState();
 
-  delay(20);
+  // Smooth non-blocking 60FPS frame pacing (~16ms per frame)
+  static unsigned long lastLoopMs = 0;
+  unsigned long elapsed = millis() - lastLoopMs;
+  if (elapsed < 16) {
+    delay(16 - elapsed);
+  }
+  lastLoopMs = millis();
 }
 
 // ---------------------------------------------------------------------------
@@ -532,6 +546,14 @@ void handleIncomingMessage(const String &msg) {
   } else if (type == "game") {
     String action = doc["action"] | "";
     if (action == "start") startReactionGame();
+    else if (action == "dino" || action == "runner") {
+      dino_startNewGame();
+      transitionTo(STATE_DINO_GAME, 0);
+    }
+
+  } else if (type == "dino" || type == "runner") {
+    dino_startNewGame();
+    transitionTo(STATE_DINO_GAME, 0);
 
   } else {
     Serial.print("Unknown message type: ");
@@ -686,7 +708,11 @@ void handleSettingsTouch(TouchEvent ev) {
   } else if (ev == TOUCH_DOUBLE_TAP) {
     if (settingsMenuIndex == 0) settings_cycleIdleTimeout();
     else if (settingsMenuIndex == 1) settings_toggleTimeFormat();
-    else settings_cycleTapAction();
+    else if (settingsMenuIndex == 2) settings_cycleTapAction();
+    else if (settingsMenuIndex == 3) {
+      dino_startNewGame();
+      transitionTo(STATE_DINO_GAME, 0);
+    }
 
   } else if (ev == TOUCH_LONG_PRESS) {
     settings_save();
@@ -716,10 +742,23 @@ void handleTouchEvent(TouchEvent ev) {
     return;
   }
 
+  if (currentState == STATE_DINO_GAME) {
+    if (ev == TOUCH_PRESS_DOWN || ev == TOUCH_SINGLE_TAP || ev == TOUCH_DOUBLE_TAP) {
+      dino_handleTap();
+    } else if (ev == TOUCH_LONG_PRESS || ev == TOUCH_HOLD_3SEC) {
+      // Continuously holding sensor for 3 seconds exits the game directly to STATE_IDLE!
+      transitionTo(STATE_IDLE, 0);
+    }
+    return;
+  }
+
   switch (ev) {
     case TOUCH_SINGLE_TAP:
       if (settings_get().singleTapAction == TAP_ACTION_SHOW_TIME) {
         transitionTo(STATE_SHOW_TIME, 6000);
+      } else if (settings_get().singleTapAction == TAP_ACTION_PLAY_DINO) {
+        dino_startNewGame();
+        transitionTo(STATE_DINO_GAME, 0);
       }
       break;
     case TOUCH_DOUBLE_TAP:
@@ -803,6 +842,11 @@ void updateStateMachine() {
     gameGoAt = millis();
   }
 
+  // Chrome Dino Elephant Game physics & obstacle update
+  if (currentState == STATE_DINO_GAME) {
+    dino_update();
+  }
+
   bool interruptible = (currentState == STATE_IDLE);
   unsigned long idleTimeoutMs = (unsigned long)settings_get().idleTimeoutMinutes * 60UL * 1000UL;
   if (interruptible && (now - lastActivityAt) >= idleTimeoutMs) {
@@ -830,6 +874,7 @@ void renderCurrentState() {
     case STATE_GAME_READY:       faces_drawGameReady(); break;
     case STATE_GAME_GO:          faces_drawGameGo(); break;
     case STATE_GAME_RESULT:      faces_drawGameResult(gameLastReactionMs, gameLastTooSoon); break;
+    case STATE_DINO_GAME:        dino_draw(&display); break;
     case STATE_NOTIFICATION:    faces_drawNotification(pendingNotificationText); break;
     case STATE_NAV_LEFT:        faces_drawNavArrow(NAV_DIR_LEFT); break;
     case STATE_NAV_RIGHT:       faces_drawNavArrow(NAV_DIR_RIGHT); break;

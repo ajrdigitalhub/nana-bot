@@ -12,13 +12,15 @@
 
 enum TouchSingleTapAction {
   TAP_ACTION_SHOW_TIME = 0,
-  TAP_ACTION_DISABLED = 1,
+  TAP_ACTION_PLAY_DINO = 1,
+  TAP_ACTION_DISABLED  = 2,
 };
 
 struct ChotubotSettings {
   int idleTimeoutMinutes = IDLE_TIMEOUT_MINUTES_DEFAULT; // cycles: 1, 5, 10, 15
   bool use24HourFormat = true;
   TouchSingleTapAction singleTapAction = TAP_ACTION_SHOW_TIME;
+  int dinoHighScore = 0;
 };
 
 static ChotubotSettings _settings;
@@ -29,12 +31,14 @@ inline void settings_load() {
   _settings.idleTimeoutMinutes = _prefs.getInt("idleMin", IDLE_TIMEOUT_MINUTES_DEFAULT);
   _settings.use24HourFormat = _prefs.getBool("use24h", true);
   _settings.singleTapAction = (TouchSingleTapAction)_prefs.getInt("tapAction", TAP_ACTION_SHOW_TIME);
+  _settings.dinoHighScore = _prefs.getInt("dinoHi", 0);
 }
 
 inline void settings_save() {
   _prefs.putInt("idleMin", _settings.idleTimeoutMinutes);
   _prefs.putBool("use24h", _settings.use24HourFormat);
   _prefs.putInt("tapAction", (int)_settings.singleTapAction);
+  _prefs.putInt("dinoHi", _settings.dinoHighScore);
 }
 
 inline ChotubotSettings& settings_get() {
@@ -56,12 +60,17 @@ inline void settings_toggleTimeFormat() {
 }
 
 inline void settings_cycleTapAction() {
-  _settings.singleTapAction =
-      (_settings.singleTapAction == TAP_ACTION_SHOW_TIME) ? TAP_ACTION_DISABLED : TAP_ACTION_SHOW_TIME;
+  if (_settings.singleTapAction == TAP_ACTION_SHOW_TIME) {
+    _settings.singleTapAction = TAP_ACTION_PLAY_DINO;
+  } else if (_settings.singleTapAction == TAP_ACTION_PLAY_DINO) {
+    _settings.singleTapAction = TAP_ACTION_DISABLED;
+  } else {
+    _settings.singleTapAction = TAP_ACTION_SHOW_TIME;
+  }
 }
 
 // Number of settings menu items — keep in sync with faces_drawSettingsMenu()
 // and the handleSettingsTouch() switch in chotubot.ino if you add more.
-#define SETTINGS_ITEM_COUNT 3
+#define SETTINGS_ITEM_COUNT 4
 
 #endif

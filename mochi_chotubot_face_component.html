@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mochi / Chotu Bot Vector Expression Engine</title>
+  <title>Mochi Commercial Avatar Expression Engine</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,14 +14,13 @@
     :root {
       --bg-dark: #090d16;
       --card-bg: rgba(15, 23, 42, 0.85);
-      --border-glow: rgba(56, 189, 248, 0.15);
+      --border-glow: rgba(56, 189, 248, 0.18);
       --face-bg: #030712;
       --eye-color: #ffffff;
       --accent-cyan: #38bdf8;
       --accent-green: #22c55e;
       --accent-red: #ef4444;
       --accent-amber: #f59e0b;
-      --transition-speed: 120ms; /* Under 150ms sub-frame morphing */
     }
 
     * {
@@ -39,17 +38,17 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 24px;
+      gap: 20px;
       padding: 24px;
     }
 
     .dashboard-header {
       text-align: center;
-      max-width: 600px;
+      max-width: 680px;
     }
 
     .dashboard-header h1 {
-      font-size: 1.4rem;
+      font-size: 1.5rem;
       font-weight: 700;
       letter-spacing: -0.02em;
       color: #f1f5f9;
@@ -62,28 +61,41 @@
     }
 
     /* 
-     * MOCHI / CHOTU BOT FACE COMPONENT
+     * MOCHI ROBOT FACE CARD CONTAINER
      */
     .robot-face-card {
       background: var(--card-bg);
       backdrop-filter: blur(16px);
       border: 1px solid var(--border-glow);
       border-radius: 20px;
-      padding: 28px;
+      padding: 24px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 20px;
+      gap: 16px;
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1);
       width: 100%;
-      max-width: 360px;
+      max-width: 420px;
       user-select: none;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    /* OLED Screen Display Area */
+    .robot-face-card.impact-bounce {
+      animation: springImpact 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes springImpact {
+      0% { transform: scale(1, 1); }
+      30% { transform: scale(1.06, 0.92); }
+      60% { transform: scale(0.96, 1.04); }
+      80% { transform: scale(1.02, 0.99); }
+      100% { transform: scale(1, 1); }
+    }
+
+    /* OLED Screen Viewport */
     .face-viewport {
-      width: 280px;
-      height: 160px;
+      width: 310px;
+      height: 175px;
       background: var(--face-bg);
       border-radius: 16px;
       border: 2px solid rgba(255, 255, 255, 0.08);
@@ -92,35 +104,42 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+      box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.85);
+      cursor: crosshair;
     }
 
-    /* SVG Face Elements */
     .face-svg {
       width: 100%;
       height: 100%;
     }
 
-    /* High-Speed Under 150ms Easing Transitions */
-    .eye, .brow, .mouth, .accent-particle {
-      transition: all var(--transition-speed) cubic-bezier(0.2, 0.8, 0.2, 1);
+    .brow, .mouth, .accent-particle, .teeth, .tongue, .heart-eye {
+      transition: opacity 120ms ease, fill 120ms ease, stroke 120ms ease;
       transform-origin: center;
     }
 
-    /* Status Indicator Badge */
+    /* Control Toolbars */
+    .controls-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 8px;
+    }
+
     .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       background: rgba(15, 23, 42, 0.6);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 6px 14px;
+      padding: 6px 12px;
       border-radius: 20px;
       font-size: 0.75rem;
       font-weight: 600;
       color: #38bdf8;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
 
     .badge-dot {
@@ -131,336 +150,605 @@
       box-shadow: 0 0 8px #38bdf8;
     }
 
-    /* 12 Business State Triggers Grid */
-    .triggers-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
+    .btn-toggle {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #94a3b8;
+      border-radius: 20px;
+      padding: 6px 10px;
+      font-size: 0.70rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-toggle.active {
+      color: #38bdf8;
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.15);
+    }
+
+    /* Reference Image Preset Quick Select Bar */
+    .reference-bar {
+      display: flex;
+      align-items: center;
       gap: 8px;
       width: 100%;
-      max-width: 440px;
+    }
+
+    .ref-btn {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 12px;
+      padding: 10px 8px;
+      color: #f8fafc;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .ref-btn:hover, .ref-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: #38bdf8;
+      color: #38bdf8;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.3);
+    }
+
+    /* Intensity Control Panel */
+    .intensity-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 8px 14px;
+      gap: 12px;
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .intensity-slider {
+      flex: 1;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+
+    /* 11 Expression Matrix Grid */
+    .triggers-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 480px;
     }
 
     .trigger-btn {
       background: rgba(30, 41, 59, 0.7);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 10px;
-      padding: 10px 8px;
+      padding: 9px 6px;
       color: #cbd5e1;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 600;
-      cursor: pointer;
       display: flex;
-      flex-direction: column;
       align-items: center;
+      justify-content: center;
       gap: 4px;
-      transition: all 0.15s ease;
+      cursor: pointer;
+      transition: all 0.18s ease;
     }
 
     .trigger-btn:hover {
-      background: rgba(56, 189, 248, 0.15);
-      border-color: rgba(56, 189, 248, 0.4);
-      color: #f8fafc;
-      transform: translateY(-1px);
+      background: rgba(51, 65, 85, 0.9);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .trigger-btn.active {
-      background: #0284c7;
+      background: rgba(56, 189, 248, 0.15);
       border-color: #38bdf8;
-      color: #ffffff;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
-    }
-
-    .btn-icon {
-      font-size: 1rem;
+      color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
     }
   </style>
 </head>
 <body>
 
   <div class="dashboard-header">
-    <h1>Chotu Bot & Mochi Vector Expression Engine</h1>
-    <p>Sub-150ms Morphing • 12 SaaS Business Emotion States • Responsive SVG Vector</p>
+    <h1>Mochi Commercial Avatar Expression Engine</h1>
+    <p>60FPS Fluid Motion • Image 1 (Cyan Hearts), Image 2 (Cyan Smile), Image 3 (Neutral White)</p>
   </div>
 
   <!-- ROBOT FACE CARD CONTAINER -->
-  <div class="robot-face-card">
+  <div class="robot-face-card" id="faceCard">
     
-    <!-- Face Viewport -->
-    <div class="face-viewport">
-      <svg class="face-svg" viewBox="0 0 280 160">
+    <!-- 3 Reference Image Direct Select Bar -->
+    <div class="reference-bar">
+      <button class="ref-btn" id="btnCyanHearts" onclick="setEmotion('cyanHearts')">
+        🩵 Image 1: Cyan Hearts
+      </button>
+      <button class="ref-btn" id="btnCyanHappy" onclick="setEmotion('cyanHappy')">
+        😊 Image 2: Cyan Smile
+      </button>
+      <button class="ref-btn active" id="btnIdle" onclick="setEmotion('idle')">
+        🤍 Image 3: Neutral
+      </button>
+    </div>
+
+    <!-- Face Viewport with Interactive Mouse Tracking -->
+    <div class="face-viewport" id="faceViewport">
+      <svg class="face-svg" viewBox="0 0 280 160" id="faceSvg">
         
-        <!-- Left Eyebrow -->
-        <line id="leftBrow" class="brow" x1="60" y1="40" x2="105" y2="40" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
-        
-        <!-- Right Eyebrow -->
-        <line id="rightBrow" class="brow" x1="175" y1="40" x2="220" y2="40" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+        <!-- Eyebrows -->
+        <line id="leftBrow" class="brow" x1="62" y1="36" x2="108" y2="36" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0"/>
+        <line id="rightBrow" class="brow" x1="172" y1="36" x2="218" y2="36" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0"/>
 
         <!-- Left Eye Group -->
         <g id="leftEyeGroup" class="eye">
-          <rect id="leftEye" x="60" y="50" width="48" height="46" rx="14" fill="#ffffff"/>
-          <circle id="leftPupil" cx="84" cy="73" r="5" fill="#030712" opacity="0"/>
-          <path id="leftSmileCut" d="M 60 96 A 24 24 0 0 0 108 96 Z" fill="#030712" opacity="0"/>
+          <rect id="leftEye" x="62" y="44" width="46" height="54" rx="16" fill="#ffffff"/>
+          <!-- Happy Smile Arch Cut -->
+          <path id="leftSmileArch" d="M 70 78 Q 85 64 100 78" stroke="#030712" stroke-width="5" stroke-linecap="round" fill="none" opacity="0"/>
+          <!-- Image 1 Glowing Cyan Heart -->
+          <path id="leftHeart" class="heart-eye" d="M 85 48 C 75 38 58 42 58 56 C 58 70 85 88 85 88 C 85 88 112 70 112 56 C 112 42 95 38 85 48 Z" fill="#38bdf8" opacity="0"/>
         </g>
 
         <!-- Right Eye Group -->
         <g id="rightEyeGroup" class="eye">
-          <rect id="rightEye" x="172" y="50" width="48" height="46" rx="14" fill="#ffffff"/>
-          <circle id="rightPupil" cx="196" cy="73" r="5" fill="#030712" opacity="0"/>
-          <path id="rightSmileCut" d="M 172 96 A 24 24 0 0 0 220 96 Z" fill="#030712" opacity="0"/>
+          <rect id="rightEye" x="172" y="44" width="46" height="54" rx="16" fill="#ffffff"/>
+          <!-- Happy Smile Arch Cut -->
+          <path id="rightSmileArch" d="M 180 78 Q 195 64 210 78" stroke="#030712" stroke-width="5" stroke-linecap="round" fill="none" opacity="0"/>
+          <!-- Image 1 Glowing Cyan Heart -->
+          <path id="rightHeart" class="heart-eye" d="M 195 48 C 185 38 168 42 168 56 C 168 70 195 88 195 88 C 195 88 222 70 222 56 C 222 42 205 38 195 48 Z" fill="#38bdf8" opacity="0"/>
         </g>
 
-        <!-- Connected Vector Polyline Mouth -->
-        <path id="mouthPath" class="mouth" d="M 124 125 Q 140 132 156 125" stroke="#ffffff" stroke-width="4" stroke-linecap="round" fill="none"/>
+        <!-- Organic Mouth Group (Shifted down for attractive eye-mouth spacing) -->
+        <g id="mouthGroup">
+          <path id="mouthCavity" d="M 126 124 Q 140 154 154 124 Z" fill="#030712" opacity="0"/>
+          <path id="teethPath" class="teeth" d="M 128 125 L 152 125" stroke="#ffffff" stroke-width="3" opacity="0"/>
+          <path id="tonguePath" class="tongue" d="M 132 138 Q 140 146 148 138" fill="#f43f5e" opacity="0"/>
+          <path id="mouthPath" class="mouth" d="M 126 124 Q 140 136 154 124" stroke="#ffffff" stroke-width="7" stroke-linecap="round" fill="none"/>
+        </g>
 
-        <!-- Accent Accents (Blush, Sparkles, Tears) -->
+        <!-- Dynamic Accent Emitters -->
         <g id="accentsGroup">
-          <!-- Blush Hatch Left -->
           <line id="blushL" class="accent-particle" x1="52" y1="108" x2="62" y2="108" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" opacity="0"/>
-          <!-- Blush Hatch Right -->
           <line id="blushR" class="accent-particle" x1="218" y1="108" x2="228" y2="108" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" opacity="0"/>
-          <!-- Tear / Particle Dot -->
-          <circle id="particleDot" class="accent-particle" cx="140" cy="30" r="4" fill="#38bdf8" opacity="0"/>
+          <path id="heartParticle" class="accent-particle" d="M 140 32 C 137 26 128 28 128 35 C 128 42 140 48 140 48 C 140 48 152 42 152 35 C 152 28 143 26 140 32 Z" fill="#ec4899" opacity="0"/>
+          <path id="tearParticle" class="accent-particle" d="M 68 95 C 65 102 71 108 75 108 C 79 108 85 102 82 95 C 80 90 75 84 75 84 C 75 84 70 90 68 95 Z" fill="#38bdf8" opacity="0"/>
+          <path id="sparkleParticle" class="accent-particle" d="M 220 30 L 223 37 L 230 40 L 223 43 L 220 50 L 217 43 L 210 40 L 217 37 Z" fill="#f59e0b" opacity="0"/>
+          <text id="sleepZz" class="accent-particle" x="220" y="38" fill="#38bdf8" font-family="'JetBrains Mono', monospace" font-size="14" font-weight="700" opacity="0">Zzz</text>
         </g>
 
       </svg>
     </div>
 
-    <!-- Status Badge -->
-    <div class="status-badge">
-      <span class="badge-dot" id="badgeDot"></span>
-      <span id="statusText">State: Idle</span>
+    <!-- Intensity Slider -->
+    <div class="intensity-box">
+      <span>Intensity: <strong id="intensityVal">100%</strong></span>
+      <input type="range" min="10" max="100" value="100" class="intensity-slider" id="intensitySlider" oninput="updateIntensity(this.value)">
+    </div>
+
+    <!-- Controls Toolbar -->
+    <div class="controls-toolbar">
+      <div class="status-badge">
+        <span class="badge-dot" id="badgeDot"></span>
+        <span id="statusText">State: Neutral</span>
+      </div>
+
+      <button class="btn-toggle" id="talkingBtn" onclick="toggleTalking()">
+        🗣️ Speech: OFF
+      </button>
+      <button class="btn-toggle active" id="autoRandomBtn" onclick="toggleAutoRandom()">
+        🎲 Random: ON
+      </button>
+      <button class="btn-toggle" id="rocketIntroBtn" onclick="playRocketIntro()">
+        🚀 Rocket Intro
+      </button>
+      <button class="btn-toggle" id="motionToggle" onclick="toggleReducedMotion()">
+        ⚡ Normal
+      </button>
     </div>
 
   </div>
 
-  <!-- 12 CURATED BUSINESS EMOTION STATES GRID -->
+  <!-- 11 EXPRESSION CATEGORIES GRID -->
   <div class="triggers-grid">
-    <button class="trigger-btn active" onclick="setEmotion('idle')">
-      <span class="btn-icon">💤</span> Idle
+    <button class="trigger-btn active" id="btnTriggerIdle" onclick="setEmotion('idle')">
+      🤍 Neutral (Img 3)
     </button>
-    <button class="trigger-btn" onclick="setEmotion('processing')">
-      <span class="btn-icon">⚡</span> Processing
+    <button class="trigger-btn" onclick="setEmotion('cyanHappy')">
+      😊 Cyan (Img 2)
     </button>
-    <button class="trigger-btn" onclick="setEmotion('success')">
-      <span class="btn-icon">✅</span> Success
+    <button class="trigger-btn" onclick="setEmotion('cyanHearts')">
+      🩵 Hearts (Img 1)
     </button>
-    <button class="trigger-btn" onclick="setEmotion('error')">
-      <span class="btn-icon">⚠️</span> Error
+    <button class="trigger-btn" onclick="setEmotion('happy')">
+      🎉 Excited Open
     </button>
-    <button class="trigger-btn" onclick="setEmotion('waiting')">
-      <span class="btn-icon">⏳</span> Waiting
+    <button class="trigger-btn" onclick="setEmotion('sad')">
+      😢 Sad/Concern
     </button>
-    <button class="trigger-btn" onclick="setEmotion('listening')">
-      <span class="btn-icon">🎙️</span> Listening
+    <button class="trigger-btn" onclick="setEmotion('angry')">
+      😡 Angry/Frust
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('surprised')">
+      😮 Surprised
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('sleepy')">
+      😴 Sleepy/Tired
     </button>
     <button class="trigger-btn" onclick="setEmotion('thinking')">
-      <span class="btn-icon">💡</span> Thinking
+      🤔 Confused/Think
     </button>
-    <button class="trigger-btn" onclick="setEmotion('confirming')">
-      <span class="btn-icon">👍</span> Confirming
+    <button class="trigger-btn" onclick="setEmotion('cute')">
+      🥺 Cute/Appeal
     </button>
-    <button class="trigger-btn" onclick="setEmotion('warning')">
-      <span class="btn-icon">🛑</span> Warning
+    <button class="trigger-btn" onclick="setEmotion('wink')">
+      😉 Wink/Playful
     </button>
-    <button class="trigger-btn" onclick="setEmotion('celebrating')">
-      <span class="btn-icon">🎉</span> Celebrating
-    </button>
-    <button class="trigger-btn" onclick="setEmotion('empathizing')">
-      <span class="btn-icon">🤝</span> Empathizing
-    </button>
-    <button class="trigger-btn" onclick="setEmotion('notifying')">
-      <span class="btn-icon">🔔</span> Notifying
+    <button class="trigger-btn" onclick="setEmotion('eating')">
+      😋 Eating/Chew
     </button>
   </div>
 
   <script>
     // DOM Elements
+    const faceCard = document.getElementById('faceCard');
+    const faceViewport = document.getElementById('faceViewport');
     const leftEye = document.getElementById('leftEye');
     const rightEye = document.getElementById('rightEye');
     const leftEyeGroup = document.getElementById('leftEyeGroup');
     const rightEyeGroup = document.getElementById('rightEyeGroup');
+    const leftSmileArch = document.getElementById('leftSmileArch');
+    const rightSmileArch = document.getElementById('rightSmileArch');
+    const leftHeart = document.getElementById('leftHeart');
+    const rightHeart = document.getElementById('rightHeart');
     const leftBrow = document.getElementById('leftBrow');
     const rightBrow = document.getElementById('rightBrow');
     const mouthPath = document.getElementById('mouthPath');
+    const mouthCavity = document.getElementById('mouthCavity');
+    const teethPath = document.getElementById('teethPath');
+    const tonguePath = document.getElementById('tonguePath');
     const blushL = document.getElementById('blushL');
     const blushR = document.getElementById('blushR');
+    const heartParticle = document.getElementById('heartParticle');
+    const tearParticle = document.getElementById('tearParticle');
+    const sparkleParticle = document.getElementById('sparkleParticle');
+    const sleepZz = document.getElementById('sleepZz');
     const statusText = document.getElementById('statusText');
     const badgeDot = document.getElementById('badgeDot');
+    const motionToggle = document.getElementById('motionToggle');
+    const autoRandomBtn = document.getElementById('autoRandomBtn');
+    const talkingBtn = document.getElementById('talkingBtn');
+    const intensityVal = document.getElementById('intensityVal');
 
-    // 12 Curated Business Emotion Presets
+    let reducedMotion = false;
+    let autoRandom = true; // Active by default for immediate visual feedback
+    let isTalking = false;
+    let autoRandomTimer = null;
+    let currentEmotion = 'idle';
+    let globalIntensity = 1.0;
+
+    // Smooth Eased Motion Variables
+    let curScaleX = 1.0, targetScaleX = 1.0;
+    let curScaleY = 1.0, targetScaleY = 1.0;
+    let curRot = 0.0, targetRot = 0.0;
+    let curMouseX = 0, targetMouseX = 0;
+    let curMouseY = 0, targetMouseY = 0;
+
+    function toggleReducedMotion() {
+      reducedMotion = !reducedMotion;
+      motionToggle.classList.toggle('active', reducedMotion);
+      motionToggle.textContent = reducedMotion ? "🛡️ Reduced" : "⚡ Normal";
+    }
+
+    function toggleAutoRandom() {
+      autoRandom = !autoRandom;
+      autoRandomBtn.classList.toggle('active', autoRandom);
+      autoRandomBtn.textContent = autoRandom ? "🎲 Random: ON" : "🎲 Random: OFF";
+
+      if (autoRandom) {
+        startAutoRandomTimer();
+      } else {
+        clearInterval(autoRandomTimer);
+      }
+    }
+
+    function startAutoRandomTimer() {
+      clearInterval(autoRandomTimer);
+      autoRandomTimer = setInterval(() => {
+        const keys = ['idle', 'cyanHappy', 'cyanHearts', 'happy', 'cute', 'wink', 'thinking', 'eating'];
+        const randomKey = keys[Math.floor(Math.random() * keys.length)];
+        setEmotion(randomKey);
+      }, 3500);
+    }
+
+    function toggleTalking() {
+      isTalking = !isTalking;
+      talkingBtn.classList.toggle('active', isTalking);
+      talkingBtn.textContent = isTalking ? "🗣️ Speech: ON" : "🗣️ Speech: OFF";
+    }
+
+    function updateIntensity(val) {
+      globalIntensity = val / 100.0;
+      intensityVal.textContent = `${val}%`;
+      setEmotion(currentEmotion);
+    }
+
+    // 11 Core Expression Presets + Image 1, 2, 3 Reference Controls
     const EMOTION_MAP = {
       idle: {
-        label: "State: Idle (Resting)",
-        color: "#38bdf8",
-        eyeScaleY: 1.0,
-        eyeScaleX: 1.0,
-        browOpacity: 0.8,
-        browAngle: -2,
-        mouth: "M 124 125 Q 140 132 156 125",
-        blush: 0,
-        rotation: 0
+        label: "Image 3: Neutral Resting (White Capsule Eyes + U-Smile)",
+        color: "#ffffff", eyeColor: "#ffffff", mouthColor: "#ffffff",
+        isHeart: false, isHappyArch: false,
+        eyeScaleY: 1.0, eyeScaleX: 1.0, browOpacity: 0, browAngle: 0,
+        mouth: "M 126 112 Q 140 124 154 112", showCavity: false,
+        blush: 0, heart: 0, tear: 0, sparkle: 0, zz: 0, rotation: 0
       },
-      processing: {
-        label: "State: Processing (Working)",
-        color: "#38bdf8",
-        eyeScaleY: 0.8,
-        eyeScaleX: 1.05,
-        browOpacity: 0.6,
-        browAngle: -4,
-        mouth: "M 126 125 Q 140 125 154 125",
-        blush: 0,
-        rotation: 0
+      cyanHappy: {
+        label: "Image 2: Cyan Happy Smile (Cyan Oval Eyes + Happy Arch + U-Smile)",
+        color: "#38bdf8", eyeColor: "#38bdf8", mouthColor: "#38bdf8",
+        isHeart: false, isHappyArch: true,
+        eyeScaleY: 1.0, eyeScaleX: 0.95, browOpacity: 0, browAngle: 0,
+        mouth: "M 126 112 Q 140 124 154 112", showCavity: false,
+        blush: 0, heart: 0, tear: 0, sparkle: 0.4, zz: 0, rotation: 0
       },
-      success: {
-        label: "State: Success (Satisfied)",
-        color: "#22c55e",
-        eyeScaleY: 0.75,
-        eyeScaleX: 1.0,
-        browOpacity: 0.4,
-        browAngle: -6,
-        mouth: "M 120 122 Q 140 138 160 122",
-        blush: 0.8,
-        rotation: 0
+      cyanHearts: {
+        label: "Image 1: Cyan Heart Eyes (Dual Cyan Hearts)",
+        color: "#38bdf8", eyeColor: "#38bdf8", mouthColor: "#38bdf8",
+        isHeart: true, isHappyArch: false,
+        eyeScaleY: 1.05, eyeScaleX: 1.05, browOpacity: 0, browAngle: 0,
+        mouth: "M 126 112 Q 140 124 154 112", showCavity: false,
+        blush: 0.8, heart: 1.0, tear: 0, sparkle: 0.8, zz: 0, rotation: 0
       },
-      error: {
-        label: "State: Error (Concerned)",
-        color: "#ef4444",
-        eyeScaleY: 0.85,
-        eyeScaleX: 0.95,
-        browOpacity: 1.0,
-        browAngle: 12,
-        mouth: "M 122 132 Q 140 120 158 132",
-        blush: 0,
-        rotation: 0
+      happy: {
+        label: "Category: Excited Open Smile",
+        color: "#22c55e", eyeColor: "#ffffff", mouthColor: "#ffffff",
+        isHeart: false, isHappyArch: false,
+        eyeScaleY: 0.8, eyeScaleX: 1.0, browOpacity: 0.4, browAngle: -6,
+        mouth: "M 120 110 Q 140 138 160 110", showCavity: true,
+        teeth: "M 124 111 L 156 111", tongue: "M 132 126 Q 140 136 148 126",
+        blush: 0.8, heart: 0, tear: 0, sparkle: 1.0, zz: 0, rotation: 0
       },
-      waiting: {
-        label: "State: Waiting (Anticipation)",
-        color: "#f59e0b",
-        eyeScaleY: 0.9,
-        eyeScaleX: 0.9,
-        browOpacity: 0.3,
-        browAngle: 0,
-        mouth: "M 128 126 Q 140 128 152 126",
-        blush: 0,
-        rotation: 0
+      sad: {
+        label: "Category: Sad / Disappointed",
+        color: "#38bdf8", eyeColor: "#ffffff", mouthColor: "#ffffff",
+        isHeart: false, isHappyArch: false,
+        eyeScaleY: 0.75, eyeScaleX: 0.95, browOpacity: 0.9, browAngle: -8,
+        mouth: "M 124 124 Q 140 112 156 124", showCavity: false,
+        blush: 0, heart: 0, tear: 0.9, sparkle: 0, zz: 0, rotation: 0
       },
-      listening: {
-        label: "State: Listening (Attentive)",
-        color: "#a855f7",
-        eyeScaleY: 1.1,
-        eyeScaleX: 1.05,
-        browOpacity: 0.7,
-        browAngle: -8,
-        mouth: "M 122 124 Q 140 134 158 124",
-        blush: 0.4,
-        rotation: 3
+      angry: {
+        label: "Category: Angry / Annoyed",
+        color: "#ef4444", eyeColor: "#ffffff", mouthColor: "#ffffff",
+        isHeart: false, isHappyArch: false,
+        eyeScaleY: 0.85, eyeScaleX: 0.95, browOpacity: 1.0, browAngle: 14,
+        mouth: "M 124 124 Q 140 114 156 124", showCavity: false,
+        blush: 0, heart: 0, tear: 0, sparkle: 0, zz: 0, rotation: 0
+      },
+      surprised: {
+        label: "Category: Surprised / Shocked",
+        color: "#f59e0b", eyeColor: "#ffffff", mouthColor: "#ffffff",
+        isHeart: false, isHappyArch: false,
+        eyeScaleY: 1.2, eyeScaleX: 1.1, browOpacity: 0.9, browAngle: -12,
+        mouth: "M 128 110 Q 140 134 152 110", showCavity: true,
+        teeth: "M 130 111 L 150 111", tongue: "M 134 126 Q 140 132 146 126",
+        blush: 0, heart: 0, tear: 0, sparkle: 0.8, zz: 0, rotation: 0
+      },
+      sleepy: {
+        label: "Category: Sleepy / Tired",
+        color: "#94a3b8", eyeColor: "#ffffff", mouthColor: "#ffffff",
+        isHeart: false, isHappyArch: false,
+        eyeScaleY: 0.45, eyeScaleX: 1.0, browOpacity: 0.5, browAngle: 4,
+        mouth: "M 126 118 Q 140 118 154 118", showCavity: false,
+        blush: 0, heart: 0, tear: 0, sparkle: 0, zz: 1.0, rotation: 0
       },
       thinking: {
-        label: "State: Thinking (Pondering)",
-        color: "#38bdf8",
-        eyeScaleY: 0.85,
-        eyeScaleX: 1.0,
-        browOpacity: 0.8,
-        browAngle: 10,
-        mouth: "M 126 128 Q 140 122 154 125",
-        blush: 0,
-        rotation: -4
+        label: "Category: Confused / Thinking",
+        color: "#a855f7", eyeColor: "#ffffff", mouthColor: "#ffffff",
+        isHeart: false, isHappyArch: false,
+        eyeScaleY: 0.85, eyeScaleX: 1.0, browOpacity: 0.8, browAngle: 10,
+        mouth: "M 126 118 Q 140 112 154 115", showCavity: false,
+        blush: 0, heart: 0, tear: 0, sparkle: 0, zz: 0, rotation: -5
       },
-      confirming: {
-        label: "State: Confirming (Approving)",
-        color: "#22c55e",
-        eyeScaleY: 0.8,
-        eyeScaleX: 1.0,
-        browOpacity: 0.5,
-        browAngle: -5,
-        mouth: "M 122 123 Q 140 135 158 123",
-        blush: 0.6,
-        rotation: 0
+      cute: {
+        label: "Category: Cute / Appealing",
+        color: "#ec4899", eyeColor: "#ffffff", mouthColor: "#ffffff",
+        isHeart: false, isHappyArch: false,
+        eyeScaleY: 1.1, eyeScaleX: 1.05, browOpacity: 0.6, browAngle: -6,
+        mouth: "M 124 112 Q 140 132 156 112", showCavity: false,
+        blush: 1.0, heart: 1.0, tear: 0, sparkle: 0.8, zz: 0, rotation: 0
       },
-      warning: {
-        label: "State: Warning (Cautious)",
-        color: "#f59e0b",
-        eyeScaleY: 0.8,
-        eyeScaleX: 0.95,
-        browOpacity: 0.9,
-        browAngle: 8,
-        mouth: "M 124 130 Q 140 122 156 130",
-        blush: 0,
-        rotation: 0
+      wink: {
+        label: "Category: Winking / Playful",
+        color: "#ec4899", eyeColor: "#ffffff", mouthColor: "#ffffff",
+        isHeart: false, isHappyArch: false,
+        eyeScaleY: 0.85, eyeScaleX: 1.0, browOpacity: 0.7, browAngle: -6,
+        mouth: "M 124 112 Q 140 130 156 112", showCavity: false,
+        blush: 0.8, heart: 0.7, tear: 0, sparkle: 0.6, zz: 0, rotation: 2
       },
-      celebrating: {
-        label: "State: Celebrating (Excited)",
-        color: "#ec4899",
-        eyeScaleY: 1.15,
-        eyeScaleX: 1.1,
-        browOpacity: 0.6,
-        browAngle: -10,
-        mouth: "M 118 120 Q 140 142 162 120",
-        blush: 1.0,
-        rotation: 0
-      },
-      empathizing: {
-        label: "State: Empathizing (Understanding)",
-        color: "#06b6d4",
-        eyeScaleY: 0.9,
-        eyeScaleX: 0.95,
-        browOpacity: 0.5,
-        browAngle: -4,
-        mouth: "M 124 124 Q 140 132 156 124",
-        blush: 0.8,
-        rotation: 0
-      },
-      notifying: {
-        label: "State: Notifying (Alerted)",
-        color: "#38bdf8",
-        eyeScaleY: 1.25,
-        eyeScaleX: 1.1,
-        browOpacity: 0.8,
-        browAngle: -12,
-        mouth: "M 128 122 Q 140 136 152 122",
-        blush: 0.3,
-        rotation: 0
+      eating: {
+        label: "Category: Eating / Chewing",
+        color: "#f59e0b", eyeColor: "#ffffff", mouthColor: "#ffffff",
+        isHeart: false, isHappyArch: false,
+        eyeScaleY: 0.85, eyeScaleX: 1.0, browOpacity: 0.6, browAngle: -3,
+        mouth: "M 126 114 Q 140 128 154 114", showCavity: true,
+        teeth: "M 128 115 L 152 115", tongue: "M 132 124 Q 140 130 148 124",
+        blush: 0.6, heart: 0, tear: 0, sparkle: 0, zz: 0, rotation: 0
       }
     };
 
     function setEmotion(name) {
+      currentEmotion = name;
       const config = EMOTION_MAP[name] || EMOTION_MAP.idle;
 
-      // Update Active Button
-      document.querySelectorAll('.trigger-btn').forEach(btn => btn.classList.remove('active'));
-      event?.currentTarget?.classList.add('active');
+      // Update Target Scales
+      targetScaleX = 1 + (config.eyeScaleX - 1) * globalIntensity;
+      targetScaleY = 1 + (config.eyeScaleY - 1) * globalIntensity;
+      targetRot = config.rotation * globalIntensity;
 
       // Update Badge
       statusText.textContent = config.label;
       badgeDot.style.background = config.color;
       badgeDot.style.boxShadow = `0 0 8px ${config.color}`;
 
-      // 1. High-Speed Sub-150ms Eye Morphing
-      leftEyeGroup.style.transform = `scale(${config.eyeScaleX}, ${config.eyeScaleY}) rotate(${config.rotation}deg)`;
-      rightEyeGroup.style.transform = `scale(${config.eyeScaleX}, ${config.eyeScaleY}) rotate(${config.rotation}deg)`;
+      // Spring Impact Bounce
+      if (!reducedMotion) {
+        faceCard.classList.remove('impact-bounce');
+        void faceCard.offsetWidth;
+        faceCard.classList.add('impact-bounce');
+      }
 
-      // 2. Brow Morphing
+      // Eye Colors & Geometry Mode
+      const eyeFill = config.eyeColor || "#ffffff";
+      const mouthStroke = config.mouthColor || "#ffffff";
+      leftEye.setAttribute('fill', eyeFill);
+      rightEye.setAttribute('fill', eyeFill);
+      mouthPath.setAttribute('stroke', mouthStroke);
+
+      // Heart / Arch Visibility
+      if (config.isHeart) {
+        leftEye.style.opacity = 0; rightEye.style.opacity = 0;
+        leftHeart.style.opacity = 1; rightHeart.style.opacity = 1;
+      } else {
+        leftEye.style.opacity = 1; rightEye.style.opacity = 1;
+        leftHeart.style.opacity = 0; rightHeart.style.opacity = 0;
+      }
+
+      if (config.isHappyArch) {
+        leftSmileArch.style.opacity = 1; rightSmileArch.style.opacity = 1;
+      } else {
+        leftSmileArch.style.opacity = 0; rightSmileArch.style.opacity = 0;
+      }
+
+      // Eyebrows
+      const browRot = config.browAngle * globalIntensity;
       leftBrow.style.opacity = config.browOpacity;
       rightBrow.style.opacity = config.browOpacity;
-      leftBrow.style.transform = `rotate(${config.browAngle}deg)`;
-      rightBrow.style.transform = `rotate(${-config.browAngle}deg)`;
+      leftBrow.style.transform = `rotate(${browRot}deg)`;
+      rightBrow.style.transform = `rotate(${-browRot}deg)`;
 
-      // 3. Mouth Polyline Curve Morphing
+      // Mouth Path & Cavity
       mouthPath.setAttribute('d', config.mouth);
+      if (config.showCavity) {
+        mouthCavity.setAttribute('d', config.mouth + " Z");
+        mouthCavity.style.opacity = 1;
+        teethPath.style.opacity = 1;
+        tonguePath.style.opacity = 1;
+      } else {
+        mouthCavity.style.opacity = 0;
+        teethPath.style.opacity = 0;
+        tonguePath.style.opacity = 0;
+      }
 
-      // 4. Blush Accents
-      blushL.style.opacity = config.blush;
-      blushR.style.opacity = config.blush;
+      // Accents
+      blushL.style.opacity = config.blush * globalIntensity;
+      blushR.style.opacity = config.blush * globalIntensity;
+      heartParticle.style.opacity = config.heart || 0;
+      tearParticle.style.opacity = config.tear || 0;
+      sparkleParticle.style.opacity = config.sparkle || 0;
+      sleepZz.style.opacity = config.zz || 0;
     }
 
-    // Micro Eye Glance & Idle Natural Breathing Animation
-    let eyeGlanceAngle = 0;
-    setInterval(() => {
-      eyeGlanceAngle += 0.05;
-      const glanceX = Math.sin(eyeGlanceAngle) * 3;
-      leftEyeGroup.style.transform += ` translate(${glanceX}px, 0px)`;
-      rightEyeGroup.style.transform += ` translate(${glanceX}px, 0px)`;
-    }, 150);
+    // Interactive Mouse Drift
+    faceViewport.addEventListener('mousemove', (e) => {
+      if (reducedMotion) return;
+      const rect = faceViewport.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left - rect.width / 2;
+      const mouseY = e.clientY - rect.top - rect.height / 2;
+
+      targetMouseX = Math.max(-5, Math.min(5, mouseX / 24));
+      targetMouseY = Math.max(-4, Math.min(4, mouseY / 24));
+    });
+
+    faceViewport.addEventListener('mouseleave', () => {
+      targetMouseX = 0;
+      targetMouseY = 0;
+    });
+
+    // -----------------------------------------------------------------------
+    // 60FPS FLUID ANIMATION ENGINE (requestAnimationFrame)
+    // -----------------------------------------------------------------------
+    let animTime = 0;
+    let lastBlinkTime = performance.now();
+    let isBlinkingNow = false;
+
+    function animateFrame(now) {
+      requestAnimationFrame(animateFrame);
+      if (reducedMotion) return;
+
+      animTime += 0.04;
+
+      // Smooth Easing Interpolation (~0.25 lerp rate)
+      curScaleX += (targetScaleX - curScaleX) * 0.25;
+      curScaleY += (targetScaleY - curScaleY) * 0.25;
+      curRot += (targetRot - curRot) * 0.25;
+      curMouseX += (targetMouseX - curMouseX) * 0.25;
+      curMouseY += (targetMouseY - curMouseY) * 0.25;
+
+      // Organic Breathing Oscillations
+      const breathY = Math.sin(animTime * 1.5) * 1.8;
+      let finalScaleY = curScaleY;
+
+      // Periodic Auto Micro-Blinking (Every 3.5s)
+      if (now - lastBlinkTime > 3500) {
+        isBlinkingNow = true;
+        if (now - lastBlinkTime > 3750) {
+          isBlinkingNow = false;
+          lastBlinkTime = now;
+        }
+      }
+      if (isBlinkingNow) {
+        finalScaleY = curScaleY * 0.08; // Squash eyes to 8% for 250ms blink
+      }
+
+      // Heart Pulse Animation for Image 1 (cyanHearts)
+      let heartScale = 1.0;
+      if (currentEmotion === 'cyanHearts') {
+        heartScale = 1.0 + Math.sin(animTime * 5.0) * 0.08;
+      }
+
+      // Speech Talking Motion
+      if (isTalking) {
+        const talkDepth = 134 + Math.sin(animTime * 12.0) * 9;
+        mouthPath.setAttribute('d', `M 126 124 Q 140 ${talkDepth} 154 124`);
+      } else if (currentEmotion === 'eating') {
+        const chewShift = Math.sin(animTime * 8.0) * 3.5;
+        mouthPath.setAttribute('d', `M 126 126 Q 140 ${136 + chewShift} 154 126`);
+      }
+
+      // Unified Single Transform String
+      const eyeTransform = `translate(${curMouseX}px, ${curMouseY + breathY}px) scale(${curScaleX * heartScale}, ${finalScaleY * heartScale}) rotate(${curRot}deg)`;
+      leftEyeGroup.style.transform = eyeTransform;
+      rightEyeGroup.style.transform = eyeTransform;
+    }
+
+    function playRocketIntro() {
+      const btn = document.getElementById('rocketIntroBtn');
+      btn.classList.add('active');
+      statusText.textContent = "State: 🚀 NANA - Your best Companion by AJRGROUPS";
+
+      // Trigger happy expression as rocket blasts off
+      setEmotion('happy');
+
+      setTimeout(() => {
+        btn.classList.remove('active');
+        setEmotion('idle');
+      }, 4200);
+    }
+
+    // Start 60fps Loop & Initialize Default State
+    startAutoRandomTimer();
+    setEmotion('idle');
+    requestAnimationFrame(animateFrame);
   </script>
 </body>
 </html>
