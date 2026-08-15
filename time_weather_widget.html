@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Time, Date & Weather Display Component</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* Reset & Base System */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 20px;
+    }
+
+    .demo-title {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #94a3b8;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* 
+     * COMPACT TIME, DATE & WEATHER DISPLAY COMPONENT
+     * Suitable for status bars, header bars, sidebars, or widget panels.
+     */
+    .widget-container {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 8px 14px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      max-width: 280px;
+      width: fit-content;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+
+    .widget-container:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Top Row: Date & Weather Details */
+    .widget-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 12px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: #94a3b8;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+      line-height: 1.2;
+    }
+
+    /* Date display format (e.g., " 15-08-2026") */
+    .widget-date {
+      color: #cbd5e1;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.70rem;
+      white-space: nowrap;
+    }
+
+    /* Weather Container (Temp, Conditions, Location) */
+    .widget-weather {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #38bdf8;
+      white-space: nowrap;
+    }
+
+    .weather-temp {
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    .weather-desc {
+      color: #94a3b8;
+      font-size: 0.68rem;
+    }
+
+    .weather-location {
+      color: #cbd5e1;
+      font-weight: 500;
+      font-size: 0.68rem;
+    }
+
+    /* Bottom Row: Real-time Time with AM/PM indicator */
+    .widget-bottom-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      line-height: 1;
+      padding: 4px 8px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      margin-top: 2px;
+    }
+
+    .widget-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #f8fafc;
+      letter-spacing: 0.02em;
+    }
+
+    .widget-ampm {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      padding: 2px 5px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .widget-sec {
+      font-size: 0.70rem;
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+    }
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Status pulse dot */
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      background: #22c55e;
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 6px #22c55e;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="demo-title">Compact Status Bar / Widget Time Display Component</div>
+
+  <!-- COMPACT WIDGET COMPONENT -->
+  <div class="widget-container" id="timeWeatherWidget">
+    
+    <!-- Top Row: Date & Weather Details -->
+    <div class="widget-top-row">
+      <span class="widget-date" id="widgetDate">--/--/----</span>
+      <div class="widget-weather" id="widgetWeather">
+        <span class="pulse-dot"></span>
+        <span class="weather-temp" id="weatherTemp">--°C</span>
+        <span class="weather-desc" id="weatherDesc">Detecting...</span>
+        <span class="weather-location" id="weatherLoc"></span>
+      </div>
+    </div>
+
+    <!-- Bottom Row: Time with AM/PM indicator on next line -->
+    <div class="widget-bottom-row">
+      <span class="widget-time" id="widgetTime">00:00</span>
+      <span class="widget-sec" id="widgetSec">:00</span>
+      <span class="widget-ampm" id="widgetAmPm">AM</span>
+    </div>
+
+  </div>
+
+  <script>
+    function getWeatherIcon(code) {
+      if (code === 0) return '☀️';
+      if (code >= 1 && code <= 3) return '⛅';
+      if (code >= 45 && code <= 48) return '🌫️';
+      if (code >= 51 && code <= 67) return '🌧️';
+      if (code >= 71 && code <= 77) return '❄️';
+      if (code >= 80 && code <= 82) return '🌦️';
+      if (code >= 95) return '⛈️';
+      return '🌤️';
+    }
+
+    function getWeatherDesc(code) {
+      if (code === 0) return 'Clear';
+      if (code >= 1 && code <= 3) return 'Cloudy';
+      if (code >= 45 && code <= 48) return 'Foggy';
+      if (code >= 51 && code <= 67) return 'Rainy';
+      if (code >= 71 && code <= 77) return 'Snowy';
+      if (code >= 80 && code <= 82) return 'Showers';
+      if (code >= 95) return 'Stormy';
+      return 'Clear';
+    }
+
+    // Real-Time Clock Update
+    function updateClock() {
+      const now = new Date();
+
+      // Format Date: DD-MM-YYYY (e.g. " 15-08-2026")
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      document.getElementById('widgetDate').textContent = ` ${day}-${month}-${year}`;
+
+      // Format Time with AM/PM on the next line
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+
+      hours = hours % 12;
+      hours = hours ? hours : 12; // 12-hour format
+      const formattedHours = String(hours).padStart(2, '0');
+
+      document.getElementById('widgetTime').textContent = `${formattedHours}:${minutes}`;
+      document.getElementById('widgetSec').textContent = `:${seconds}`;
+      document.getElementById('widgetAmPm').textContent = ampm;
+    }
+
+    // IP Geolocation & Open-Meteo Weather Fetching
+    async function fetchWeatherByIP() {
+      try {
+        const geoRes = await fetch('https://ipapi.co/json/').catch(() => null) 
+                    || await fetch('https://ip-api.com/json/').catch(() => null);
+        
+        let lat = 19.076, lon = 72.8777, city = 'Local';
+        
+        if (geoRes && geoRes.ok) {
+          const geoData = await geoRes.json();
+          lat = geoData.latitude || geoData.lat || lat;
+          lon = geoData.longitude || geoData.lon || lon;
+          city = geoData.city || city;
+        }
+
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+        if (weatherRes.ok) {
+          const weatherData = await weatherRes.json();
+          const cw = weatherData.current_weather;
+          const temp = Math.round(cw.temperature);
+          const code = cw.weathercode;
+          const icon = getWeatherIcon(code);
+          const desc = getWeatherDesc(code);
+
+          document.getElementById('weatherTemp').textContent = `${icon} ${temp}°C`;
+          document.getElementById('weatherDesc').textContent = desc;
+          document.getElementById('weatherLoc').textContent = `• ${city}`;
+        }
+      } catch (err) {
+        console.warn('Weather fetch fallback:', err);
+        document.getElementById('weatherTemp').textContent = '28°C';
+        document.getElementById('weatherDesc').textContent = 'Clear';
+        document.getElementById('weatherLoc').textContent = '• Local';
+      }
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    fetchWeatherByIP();
+    setInterval(fetchWeatherByIP, 15 * 60 * 1000);
+  </script>
+</body>
+</html>

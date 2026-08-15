@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mochi / Chotu Bot Vector Expression Engine</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --border-glow: rgba(56, 189, 248, 0.15);
+      --face-bg: #030712;
+      --eye-color: #ffffff;
+      --accent-cyan: #38bdf8;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --accent-amber: #f59e0b;
+      --transition-speed: 120ms; /* Under 150ms sub-frame morphing */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-dark);
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    .dashboard-header {
+      text-align: center;
+      max-width: 600px;
+    }
+
+    .dashboard-header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #f1f5f9;
+      margin-bottom: 6px;
+    }
+
+    .dashboard-header p {
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    /* 
+     * MOCHI / CHOTU BOT FACE COMPONENT
+     */
+    .robot-face-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-glow);
+      border-radius: 20px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+      width: 100%;
+      max-width: 360px;
+      user-select: none;
+    }
+
+    /* OLED Screen Display Area */
+    .face-viewport {
+      width: 280px;
+      height: 160px;
+      background: var(--face-bg);
+      border-radius: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+    }
+
+    /* SVG Face Elements */
+    .face-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* High-Speed Under 150ms Easing Transitions */
+    .eye, .brow, .mouth, .accent-particle {
+      transition: all var(--transition-speed) cubic-bezier(0.2, 0.8, 0.2, 1);
+      transform-origin: center;
+    }
+
+    /* Status Indicator Badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+
+    /* 12 Business State Triggers Grid */
+    .triggers-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 440px;
+    }
+
+    .trigger-btn {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 10px 8px;
+      color: #cbd5e1;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .trigger-btn:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #f8fafc;
+      transform: translateY(-1px);
+    }
+
+    .trigger-btn.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+    }
+
+    .btn-icon {
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-header">
+    <h1>Chotu Bot & Mochi Vector Expression Engine</h1>
+    <p>Sub-150ms Morphing • 12 SaaS Business Emotion States • Responsive SVG Vector</p>
+  </div>
+
+  <!-- ROBOT FACE CARD CONTAINER -->
+  <div class="robot-face-card">
+    
+    <!-- Face Viewport -->
+    <div class="face-viewport">
+      <svg class="face-svg" viewBox="0 0 280 160">
+        
+        <!-- Left Eyebrow -->
+        <line id="leftBrow" class="brow" x1="60" y1="40" x2="105" y2="40" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+        
+        <!-- Right Eyebrow -->
+        <line id="rightBrow" class="brow" x1="175" y1="40" x2="220" y2="40" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+
+        <!-- Left Eye Group -->
+        <g id="leftEyeGroup" class="eye">
+          <rect id="leftEye" x="60" y="50" width="48" height="46" rx="14" fill="#ffffff"/>
+          <circle id="leftPupil" cx="84" cy="73" r="5" fill="#030712" opacity="0"/>
+          <path id="leftSmileCut" d="M 60 96 A 24 24 0 0 0 108 96 Z" fill="#030712" opacity="0"/>
+        </g>
+
+        <!-- Right Eye Group -->
+        <g id="rightEyeGroup" class="eye">
+          <rect id="rightEye" x="172" y="50" width="48" height="46" rx="14" fill="#ffffff"/>
+          <circle id="rightPupil" cx="196" cy="73" r="5" fill="#030712" opacity="0"/>
+          <path id="rightSmileCut" d="M 172 96 A 24 24 0 0 0 220 96 Z" fill="#030712" opacity="0"/>
+        </g>
+
+        <!-- Connected Vector Polyline Mouth -->
+        <path id="mouthPath" class="mouth" d="M 124 125 Q 140 132 156 125" stroke="#ffffff" stroke-width="4" stroke-linecap="round" fill="none"/>
+
+        <!-- Accent Accents (Blush, Sparkles, Tears) -->
+        <g id="accentsGroup">
+          <!-- Blush Hatch Left -->
+          <line id="blushL" class="accent-particle" x1="52" y1="108" x2="62" y2="108" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" opacity="0"/>
+          <!-- Blush Hatch Right -->
+          <line id="blushR" class="accent-particle" x1="218" y1="108" x2="228" y2="108" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" opacity="0"/>
+          <!-- Tear / Particle Dot -->
+          <circle id="particleDot" class="accent-particle" cx="140" cy="30" r="4" fill="#38bdf8" opacity="0"/>
+        </g>
+
+      </svg>
+    </div>
+
+    <!-- Status Badge -->
+    <div class="status-badge">
+      <span class="badge-dot" id="badgeDot"></span>
+      <span id="statusText">State: Idle</span>
+    </div>
+
+  </div>
+
+  <!-- 12 CURATED BUSINESS EMOTION STATES GRID -->
+  <div class="triggers-grid">
+    <button class="trigger-btn active" onclick="setEmotion('idle')">
+      <span class="btn-icon">💤</span> Idle
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('processing')">
+      <span class="btn-icon">⚡</span> Processing
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('success')">
+      <span class="btn-icon">✅</span> Success
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('error')">
+      <span class="btn-icon">⚠️</span> Error
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('waiting')">
+      <span class="btn-icon">⏳</span> Waiting
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('listening')">
+      <span class="btn-icon">🎙️</span> Listening
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('thinking')">
+      <span class="btn-icon">💡</span> Thinking
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('confirming')">
+      <span class="btn-icon">👍</span> Confirming
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('warning')">
+      <span class="btn-icon">🛑</span> Warning
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('celebrating')">
+      <span class="btn-icon">🎉</span> Celebrating
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('empathizing')">
+      <span class="btn-icon">🤝</span> Empathizing
+    </button>
+    <button class="trigger-btn" onclick="setEmotion('notifying')">
+      <span class="btn-icon">🔔</span> Notifying
+    </button>
+  </div>
+
+  <script>
+    // DOM Elements
+    const leftEye = document.getElementById('leftEye');
+    const rightEye = document.getElementById('rightEye');
+    const leftEyeGroup = document.getElementById('leftEyeGroup');
+    const rightEyeGroup = document.getElementById('rightEyeGroup');
+    const leftBrow = document.getElementById('leftBrow');
+    const rightBrow = document.getElementById('rightBrow');
+    const mouthPath = document.getElementById('mouthPath');
+    const blushL = document.getElementById('blushL');
+    const blushR = document.getElementById('blushR');
+    const statusText = document.getElementById('statusText');
+    const badgeDot = document.getElementById('badgeDot');
+
+    // 12 Curated Business Emotion Presets
+    const EMOTION_MAP = {
+      idle: {
+        label: "State: Idle (Resting)",
+        color: "#38bdf8",
+        eyeScaleY: 1.0,
+        eyeScaleX: 1.0,
+        browOpacity: 0.8,
+        browAngle: -2,
+        mouth: "M 124 125 Q 140 132 156 125",
+        blush: 0,
+        rotation: 0
+      },
+      processing: {
+        label: "State: Processing (Working)",
+        color: "#38bdf8",
+        eyeScaleY: 0.8,
+        eyeScaleX: 1.05,
+        browOpacity: 0.6,
+        browAngle: -4,
+        mouth: "M 126 125 Q 140 125 154 125",
+        blush: 0,
+        rotation: 0
+      },
+      success: {
+        label: "State: Success (Satisfied)",
+        color: "#22c55e",
+        eyeScaleY: 0.75,
+        eyeScaleX: 1.0,
+        browOpacity: 0.4,
+        browAngle: -6,
+        mouth: "M 120 122 Q 140 138 160 122",
+        blush: 0.8,
+        rotation: 0
+      },
+      error: {
+        label: "State: Error (Concerned)",
+        color: "#ef4444",
+        eyeScaleY: 0.85,
+        eyeScaleX: 0.95,
+        browOpacity: 1.0,
+        browAngle: 12,
+        mouth: "M 122 132 Q 140 120 158 132",
+        blush: 0,
+        rotation: 0
+      },
+      waiting: {
+        label: "State: Waiting (Anticipation)",
+        color: "#f59e0b",
+        eyeScaleY: 0.9,
+        eyeScaleX: 0.9,
+        browOpacity: 0.3,
+        browAngle: 0,
+        mouth: "M 128 126 Q 140 128 152 126",
+        blush: 0,
+        rotation: 0
+      },
+      listening: {
+        label: "State: Listening (Attentive)",
+        color: "#a855f7",
+        eyeScaleY: 1.1,
+        eyeScaleX: 1.05,
+        browOpacity: 0.7,
+        browAngle: -8,
+        mouth: "M 122 124 Q 140 134 158 124",
+        blush: 0.4,
+        rotation: 3
+      },
+      thinking: {
+        label: "State: Thinking (Pondering)",
+        color: "#38bdf8",
+        eyeScaleY: 0.85,
+        eyeScaleX: 1.0,
+        browOpacity: 0.8,
+        browAngle: 10,
+        mouth: "M 126 128 Q 140 122 154 125",
+        blush: 0,
+        rotation: -4
+      },
+      confirming: {
+        label: "State: Confirming (Approving)",
+        color: "#22c55e",
+        eyeScaleY: 0.8,
+        eyeScaleX: 1.0,
+        browOpacity: 0.5,
+        browAngle: -5,
+        mouth: "M 122 123 Q 140 135 158 123",
+        blush: 0.6,
+        rotation: 0
+      },
+      warning: {
+        label: "State: Warning (Cautious)",
+        color: "#f59e0b",
+        eyeScaleY: 0.8,
+        eyeScaleX: 0.95,
+        browOpacity: 0.9,
+        browAngle: 8,
+        mouth: "M 124 130 Q 140 122 156 130",
+        blush: 0,
+        rotation: 0
+      },
+      celebrating: {
+        label: "State: Celebrating (Excited)",
+        color: "#ec4899",
+        eyeScaleY: 1.15,
+        eyeScaleX: 1.1,
+        browOpacity: 0.6,
+        browAngle: -10,
+        mouth: "M 118 120 Q 140 142 162 120",
+        blush: 1.0,
+        rotation: 0
+      },
+      empathizing: {
+        label: "State: Empathizing (Understanding)",
+        color: "#06b6d4",
+        eyeScaleY: 0.9,
+        eyeScaleX: 0.95,
+        browOpacity: 0.5,
+        browAngle: -4,
+        mouth: "M 124 124 Q 140 132 156 124",
+        blush: 0.8,
+        rotation: 0
+      },
+      notifying: {
+        label: "State: Notifying (Alerted)",
+        color: "#38bdf8",
+        eyeScaleY: 1.25,
+        eyeScaleX: 1.1,
+        browOpacity: 0.8,
+        browAngle: -12,
+        mouth: "M 128 122 Q 140 136 152 122",
+        blush: 0.3,
+        rotation: 0
+      }
+    };
+
+    function setEmotion(name) {
+      const config = EMOTION_MAP[name] || EMOTION_MAP.idle;
+
+      // Update Active Button
+      document.querySelectorAll('.trigger-btn').forEach(btn => btn.classList.remove('active'));
+      event?.currentTarget?.classList.add('active');
+
+      // Update Badge
+      statusText.textContent = config.label;
+      badgeDot.style.background = config.color;
+      badgeDot.style.boxShadow = `0 0 8px ${config.color}`;
+
+      // 1. High-Speed Sub-150ms Eye Morphing
+      leftEyeGroup.style.transform = `scale(${config.eyeScaleX}, ${config.eyeScaleY}) rotate(${config.rotation}deg)`;
+      rightEyeGroup.style.transform = `scale(${config.eyeScaleX}, ${config.eyeScaleY}) rotate(${config.rotation}deg)`;
+
+      // 2. Brow Morphing
+      leftBrow.style.opacity = config.browOpacity;
+      rightBrow.style.opacity = config.browOpacity;
+      leftBrow.style.transform = `rotate(${config.browAngle}deg)`;
+      rightBrow.style.transform = `rotate(${-config.browAngle}deg)`;
+
+      // 3. Mouth Polyline Curve Morphing
+      mouthPath.setAttribute('d', config.mouth);
+
+      // 4. Blush Accents
+      blushL.style.opacity = config.blush;
+      blushR.style.opacity = config.blush;
+    }
+
+    // Micro Eye Glance & Idle Natural Breathing Animation
+    let eyeGlanceAngle = 0;
+    setInterval(() => {
+      eyeGlanceAngle += 0.05;
+      const glanceX = Math.sin(eyeGlanceAngle) * 3;
+      leftEyeGroup.style.transform += ` translate(${glanceX}px, 0px)`;
+      rightEyeGroup.style.transform += ` translate(${glanceX}px, 0px)`;
+    }, 150);
+  </script>
+</body>
+</html>
