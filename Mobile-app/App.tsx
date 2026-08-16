@@ -1,0 +1,87 @@
+import React, { useEffect, useState } from 'react';
+import { SafeAreaView, ActivityIndicator } from 'react-native';
+import auth from '@react-native-firebase/auth';
+
+import LoginScreen from './src/screens/LoginScreen';
+import PairingScreen, { getSavedDeviceId } from './src/screens/PairingScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import NavigateScreen from './src/screens/NavigateScreen';
+import GamesScreen from './src/screens/GamesScreen';
+import DoodleScreen from './src/screens/DoodleScreen';
+import BottomTabBar, { Tab } from './src/components/BottomTabBar';
+import { theme } from './src/theme';
+
+type Screen = 'loading' | 'login' | 'pairing' | 'paired';
+
+export default function App() {
+  const [screen, setScreen] = useState<Screen>('loading');
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [doodleOpen, setDoodleOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = auth().onAuthStateChanged(async (user) => {
+      if (!user) {
+        setScreen('login');
+        return;
+      }
+      const saved = await getSavedDeviceId();
+      if (saved) {
+        setDeviceId(saved);
+        setScreen('paired');
+      } else {
+        setScreen('pairing');
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  if (screen === 'loading') {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', backgroundColor: theme.colors.bg }}>
+        <ActivityIndicator size="large" color={theme.colors.accent} />
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === 'login') {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+        <LoginScreen onSignedIn={() => setScreen('pairing')} />
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === 'pairing') {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+        <PairingScreen
+          onPaired={(id) => {
+            setDeviceId(id);
+            setScreen('paired');
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // screen === 'paired'
+  if (!deviceId) return null;
+
+  if (doodleOpen) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+        <DoodleScreen deviceId={deviceId} onDone={() => setDoodleOpen(false)} />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+      {activeTab === 'home' && <HomeScreen deviceId={deviceId} onOpenDoodle={() => setDoodleOpen(true)} />}
+      {activeTab === 'navigate' && <NavigateScreen deviceId={deviceId} />}
+      {activeTab === 'games' && <GamesScreen deviceId={deviceId} />}
+      <BottomTabBar active={activeTab} onChange={setActiveTab} />
+    </SafeAreaView>
+  );
+}

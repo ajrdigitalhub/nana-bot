@@ -16,10 +16,17 @@ enum TouchSingleTapAction {
   TAP_ACTION_DISABLED  = 2,
 };
 
+enum SoundMode {
+  SOUND_NORMAL = 0,
+  SOUND_MUTE   = 1,
+  SOUND_QUIET  = 2,
+};
+
 struct ChotubotSettings {
   int idleTimeoutMinutes = IDLE_TIMEOUT_MINUTES_DEFAULT; // cycles: 1, 5, 10, 15
   bool use24HourFormat = true;
   TouchSingleTapAction singleTapAction = TAP_ACTION_SHOW_TIME;
+  SoundMode soundMode = SOUND_NORMAL;
   int dinoHighScore = 0;
 };
 
@@ -31,6 +38,7 @@ inline void settings_load() {
   _settings.idleTimeoutMinutes = _prefs.getInt("idleMin", IDLE_TIMEOUT_MINUTES_DEFAULT);
   _settings.use24HourFormat = _prefs.getBool("use24h", true);
   _settings.singleTapAction = (TouchSingleTapAction)_prefs.getInt("tapAction", TAP_ACTION_SHOW_TIME);
+  _settings.soundMode = (SoundMode)_prefs.getInt("sndMode", SOUND_NORMAL);
   _settings.dinoHighScore = _prefs.getInt("dinoHi", 0);
 }
 
@@ -38,11 +46,18 @@ inline void settings_save() {
   _prefs.putInt("idleMin", _settings.idleTimeoutMinutes);
   _prefs.putBool("use24h", _settings.use24HourFormat);
   _prefs.putInt("tapAction", (int)_settings.singleTapAction);
+  _prefs.putInt("sndMode", (int)_settings.soundMode);
   _prefs.putInt("dinoHi", _settings.dinoHighScore);
 }
 
 inline ChotubotSettings& settings_get() {
   return _settings;
+}
+
+inline void settings_cycleSoundMode() {
+  if (_settings.soundMode == SOUND_NORMAL) _settings.soundMode = SOUND_MUTE;
+  else if (_settings.soundMode == SOUND_MUTE) _settings.soundMode = SOUND_QUIET;
+  else _settings.soundMode = SOUND_NORMAL;
 }
 
 inline void settings_cycleIdleTimeout() {
@@ -70,7 +85,7 @@ inline void settings_cycleTapAction() {
 }
 
 // Number of settings menu items — keep in sync with faces_drawSettingsMenu()
-// and the handleSettingsTouch() switch in chotubot.ino if you add more.
-#define SETTINGS_ITEM_COUNT 4
+// and the handleSettingsTouch() switch in chotubot.ino
+#define SETTINGS_ITEM_COUNT 5
 
 #endif

@@ -1,0 +1,24 @@
+{
+  "name": "ChotubotApp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "start": "react-native start"
+  },
+  "dependencies": {
+    "react": "18.2.0",
+    "react-native": "0.74.0",
+    "@react-native-firebase/app": "^19.0.0",
+    "@react-native-firebase/auth": "^19.0.0",
+    "@react-native-firebase/database": "^19.0.0",
+    "@react-native-firebase/functions": "^19.0.0",
+    "@react-native-async-storage/async-storage": "^1.23.1",
+    "react-native-svg": "^15.1.0",
+    "react-native-canvas": "^0.1.39"
+  },
+  "devDependencies": {
+    "@react-native/metro-config": "0.74.0",
+    "typescript": "5.0.4"
+  }
+}

@@ -93,13 +93,13 @@ void faces_init(Adafruit_SH1106G* display) {
 // ---------------------------------------------------------------------------
 // Layout
 // ---------------------------------------------------------------------------
-static const int EYE_W_DEFAULT = 28;
-static const int EYE_H_DEFAULT = 24;
-static const int EYE_RADIUS    = 7;
-static const int EYE_GAP       = 12;
-static const int EYE_CENTER_Y  = 31;
+static const int EYE_W_DEFAULT = 24;
+static const int EYE_H_DEFAULT = 28;
+static const int EYE_RADIUS    = 8;
+static const int EYE_GAP       = 14;
+static const int EYE_CENTER_Y  = 30;
 static const int BROW_GAP_ABOVE_EYE = 6;
-static const int MOUTH_Y       = 54;
+static const int MOUTH_Y       = 52;
 
 // ---------------------------------------------------------------------------
 // Mood table — one row per EyeMood. This is the entire "personality" of
@@ -112,18 +112,18 @@ struct MoodTargets {
 };
 
 static const MoodTargets _MOOD_TABLE[MOOD_COUNT] = {
-  /* DEFAULT     */ { 1.00f, 0.0f, 0.0f, 0.0f,  0.8f, -2, -1,  0.0f, 0.0f, 0.0f,  0.25f },
+  /* DEFAULT     */ { 1.00f, 0.0f, 0.0f, 0.0f,  0.8f, -2, -1,  0.0f, 0.0f, 0.0f,  0.35f },
   /* HAPPY       */ { 0.85f, 0.0f, 0.0f, 1.0f,  0.8f, -3, -2,  0.0f, 0.0f, 1.0f,  1.00f },
-  /* ANGRY       */ { 0.85f, 1.0f, 0.0f, 0.0f,  1.0f,  4, -2,  0.0f, 0.0f, 0.0f, -0.20f },
+  /* ANGRY       */ { 0.85f, 1.0f, 0.0f, 0.0f,  1.0f,  4, -2,  0.0f, 0.0f, 0.0f, -0.40f },
   /* SAD         */ { 0.75f, 0.0f, 1.0f, 0.0f,  1.0f, -3,  3,  0.0f, 0.0f, 0.0f, -0.70f },
   /* SURPRISED   */ { 1.25f, 0.0f, 0.0f, 0.0f,  0.9f, -5, -5,  0.0f, 0.0f, 0.0f,  0.50f },
-  /* CURIOUS     */ { 1.05f, 0.0f, 0.0f, 0.0f,  0.8f, -2, -2,  0.8f, 0.15f,0.0f,  0.20f },
-  /* SKEPTICAL   */ { 0.90f, 0.0f, 0.0f, 0.0f,  0.8f,  1, -3, -0.8f,-0.15f,0.0f, -0.10f },
+  /* CURIOUS     */ { 1.05f, 0.0f, 0.0f, 0.0f,  0.8f, -2, -2,  0.8f, 0.15f,0.0f,  0.30f },
+  /* SKEPTICAL   */ { 0.90f, 0.0f, 0.0f, 0.0f,  0.8f,  1, -3, -0.8f,-0.15f,0.0f, -0.20f },
   /* SLEEPY      */ { 0.50f, 0.0f, 0.0f, 0.0f,  0.6f,  2,  2,  0.0f, 0.0f, 0.0f, -0.10f },
   /* THOUGHTFUL  */ { 0.90f, 0.0f, 0.3f, 0.0f,  0.8f, -1,  2,  0.0f, 0.0f, 0.0f, -0.05f },
   /* PLAYFUL     */ { 0.80f, 0.0f, 0.0f, 0.6f,  0.7f, -3, -1,  0.4f, 0.1f, 0.6f,  0.70f },
   /* EMBARRASSED */ { 0.80f, 0.0f, 0.2f, 0.2f,  0.7f, -2,  1,  0.0f, 0.0f, 1.0f,  0.30f },
-  /* SUSPICIOUS  */ { 0.75f, 0.3f, 0.0f, 0.0f,  0.9f,  2, -2, -1.0f,-0.2f, 0.0f, -0.15f },
+  /* SUSPICIOUS  */ { 0.75f, 0.3f, 0.0f, 0.0f,  0.9f,  2, -2, -1.0f,-0.2f, 0.0f, -0.20f },
   /* CUTE_SMILE  */ { 0.90f, 0.0f, 0.0f, 0.95f, 0.8f, -3, -2,  0.0f, 0.0f, 1.0f,  1.10f },
   /* DOG         */ { 0.85f, 0.0f, 0.0f, 0.50f, 0.8f, -3, -1,  0.0f, 0.0f, 0.6f,  0.80f },
   /* CAT         */ { 0.80f, 0.0f, 0.0f, 0.60f, 0.8f, -2, -2,  0.0f, 0.0f, 0.7f,  0.90f },
@@ -163,7 +163,9 @@ static unsigned long _lookHoldUntil = 0;
 static const float EASE_RATE = 0.38f;
 
 inline float _ease(float current, float target) {
-  return current + (target - current) * EASE_RATE;
+  float diff = target - current;
+  if (fabs(diff) < 0.005f) return target;
+  return current + diff * EASE_RATE;
 }
 
 void faces_glanceAt(float dx, float dy, unsigned long holdMs) {
@@ -303,44 +305,46 @@ void _drawBlush(int leftCx, int rightCx, int cy) {
 }
 
 // ---------------------------------------------------------------------------
-// Mouth - rich connected mouth contour with open smile cavity & dimples
+// Mouth - smooth curve-based mouth engine (parabolic U-smile & frown arcs)
+// matching reference design with rounded 3px thick stroke
 // ---------------------------------------------------------------------------
-void _drawMouth(float curvature, int width = 11) {
-  int cx = SCREEN_WIDTH / 2;
+void _drawMouth(float curvature, int width = 10) {
+  int lookXPx = (int)_curLookX;
+  int lookYPx = (int)_curLookY;
 
-  // Open mouth cavity with teeth line & tongue for big happy/excited smiles
-  if (curvature > 0.45f) {
-    int h = (int)(curvature * 8.0f);
-    int topY = MOUTH_Y - 2;
-    _disp->fillRoundRect(cx - width, topY, width * 2, h + 4, 4, SH110X_WHITE);
-    _disp->fillRoundRect(cx - width + 2, topY + 2, (width - 2) * 2, h, 3, SH110X_BLACK);
-    
-    // Teeth line (white bar across top of open mouth cavity)
-    _disp->drawFastHLine(cx - width + 4, topY + 2, (width - 4) * 2, SH110X_WHITE);
-    
-    // Tongue curve at bottom
-    _disp->fillRoundRect(cx - 4, topY + h - 1, 8, 4, 2, SH110X_WHITE);
-    return;
-  }
+  // Dynamic Eye-Mouth Synced Position (85% parallax ratio matching physical depth)
+  int mouthCx = SCREEN_WIDTH / 2 + (int)(lookXPx * 0.85f);
+  int mouthBaseY = MOUTH_Y + (int)(lookYPx * 0.85f);
 
-  // Thick 3-4px rounded U-smile arc matching reference image
+  // Render parabolic quadratic curve for all moods (smiles sag down, frowns curve up)
   int prevX = 0, prevY = 0;
   bool havePrev = false;
 
   for (int dx = -width; dx <= width; dx++) {
-    float t = (float)(width - abs(dx)) / (float)width; // 0 at ends, 1 at center
-    int x = cx + dx;
-    int y = MOUTH_Y + (int)(-curvature * t * 5.0f);
+    float norm = (float)dx / (float)width;      // -1.0 to +1.0
+    float t = 1.0f - (norm * norm);             // 1.0 at center (dx=0), 0.0 at ends (dx=±width)
+    int x = mouthCx + dx;
+
+    int y;
+    if (curvature >= 0.0f) {
+      // Positive curvature -> sag DOWNWARDS below baseline (cute U-smile)
+      float maxSag = 5.5f * (curvature > 1.2f ? 1.2f : curvature);
+      y = mouthBaseY + (int)(t * maxSag + 0.5f);
+    } else {
+      // Negative curvature -> curve UPWARDS above baseline (frown)
+      float maxSag = 5.5f * (-curvature > 1.2f ? 1.2f : -curvature);
+      y = mouthBaseY - (int)(t * maxSag + 0.5f);
+    }
+
+    // Draw smooth 3px thick stroke with rounded end-caps using filled circles
+    _disp->fillCircle(x, y, 1, SH110X_WHITE);
 
     if (havePrev) {
-      // 3px-4px thick stroke for thick rounded U-smile matching reference image
       _disp->drawLine(prevX, prevY, x, y, SH110X_WHITE);
       _disp->drawLine(prevX, prevY + 1, x, y + 1, SH110X_WHITE);
-      _disp->drawLine(prevX, prevY + 2, x, y + 2, SH110X_WHITE);
-      if (abs(dx) <= width - 2) {
-        _disp->drawLine(prevX, prevY + 3, x, y + 3, SH110X_WHITE);
-      }
+      _disp->drawLine(prevX, prevY - 1, x, y - 1, SH110X_WHITE);
     }
+
     prevX = x;
     prevY = y;
     havePrev = true;
@@ -458,6 +462,37 @@ void _drawWipeText(const char* text, int x, int y, float localT, uint8_t textSiz
 
 inline float _clamp01(float v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 
+// 12x12 Vintage Nokia Icons for Settings Menu
+static const uint8_t PROGMEM icon_nokia_game[] = {
+  0x07, 0x00, 0x07, 0x40, 0x07, 0xE0, 0x03, 0xE0,
+  0x0F, 0xC0, 0x1F, 0x80, 0x3F, 0x00, 0x3E, 0x00,
+  0x1C, 0x00, 0x14, 0x00, 0x14, 0x00, 0x12, 0x00
+};
+
+static const uint8_t PROGMEM icon_nokia_sound[] = {
+  0x0E, 0x00, 0x1E, 0x40, 0x3E, 0xA0, 0x7F, 0x10,
+  0x7F, 0x10, 0x7F, 0x10, 0x3E, 0xA0, 0x1E, 0x40,
+  0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static const uint8_t PROGMEM icon_nokia_clock[] = {
+  0x1F, 0x00, 0x30, 0x80, 0x61, 0x80, 0x43, 0x00,
+  0x46, 0x00, 0x44, 0x00, 0x40, 0x00, 0x60, 0x80,
+  0x30, 0x80, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static const uint8_t PROGMEM icon_nokia_timefmt[] = {
+  0x7F, 0xE0, 0x40, 0x20, 0x7F, 0xE0, 0x40, 0x20,
+  0x49, 0x20, 0x49, 0x20, 0x55, 0x20, 0x55, 0x20,
+  0x40, 0x20, 0x7F, 0xE0, 0x00, 0x00, 0x00, 0x00
+};
+
+static const uint8_t PROGMEM icon_nokia_touch[] = {
+  0x0C, 0x00, 0x0C, 0x00, 0x0C, 0x00, 0x0C, 0x00,
+  0x0D, 0xB0, 0x1D, 0xB8, 0x3F, 0xF8, 0x3F, 0xF8,
+  0x1F, 0xF0, 0x0F, 0xE0, 0x07, 0xC0, 0x00, 0x00
+};
+
 // 12x18 Rocket Sprite Bitmaps
 static const uint8_t PROGMEM rocket_bitmap[] = {
   0x06, 0x00, //      ##
@@ -478,95 +513,99 @@ static const uint8_t PROGMEM rocket_bitmap[] = {
 };
 
 void faces_playBootIntro() {
-  const unsigned long DURATION = 6500;
+  const unsigned long DURATION = 6400; // 3.2s Page 1 + 3.2s Page 2
   unsigned long start = millis();
-
-  // Particle structure for launch pad smoke billows
-  struct SmokePuff { int x, y, maxR; };
-  SmokePuff smoke[14];
-  for (int i = 0; i < 14; i++) {
-    smoke[i].x = random(10, 118);
-    smoke[i].y = random(46, 64);
-    smoke[i].maxR = random(6, 20);
-  }
 
   while (millis() - start < DURATION) {
     unsigned long elapsed = millis() - start;
-    float t = (float)elapsed / DURATION;
-
     _disp->clearDisplay();
 
-    // 1. Rocket position calculation (ignition at pad -> blast off)
-    int rocketX = (SCREEN_WIDTH - 12) / 2; // centered at x = 58
-    int rocketY;
-
-    if (t < 0.20f) {
-      // Stage 1: Engine ignition rumble & smoke puff
-      rocketY = 40 + random(-1, 2); // slight pad vibration
-      #if defined(SPEAKER_PIN)
-      tone(SPEAKER_PIN, 120 + (int)(t * 800), 20);
-      #endif
-    } else if (t < 0.50f) {
-      // Stage 2: Blast Off accelerate upward
-      float launchT = (t - 0.20f) / 0.30f;
-      rocketY = 40 - (int)(launchT * launchT * 80); // parabolic acceleration up to y = -40
-      #if defined(SPEAKER_PIN)
-      tone(SPEAKER_PIN, 350 + (int)(launchT * 900), 20);
-      #endif
-    } else {
-      // Stage 3: Rocket launched off screen
-      rocketY = -40;
-    }
-
-    // 2. Draw Flame Trail when rocket is launching
-    if (t >= 0.10f && rocketY > -20) {
-      int flameH = random(8, 16);
-      _disp->fillTriangle(rocketX + 3, rocketY + 18,
-                          rocketX + 9, rocketY + 18,
-                          rocketX + 6, rocketY + 18 + flameH, SH110X_WHITE);
-    }
-
-    // 3. Draw Rocket Sprite
-    if (rocketY > -20) {
-      _disp->drawBitmap(rocketX, rocketY, rocket_bitmap, 12, 18, SH110X_WHITE);
-    }
-
-    // 4. Draw Expanding Smoke Particle Billows
-    for (int i = 0; i < 14; i++) {
-      float smokeT = _clamp01((t - 0.08f) / 0.65f);
-      if (smokeT > 0.0f) {
-        int currentR = (int)(smoke[i].maxR * smokeT);
-        int smokeY = smoke[i].y - (int)(smokeT * 12);
-        if (smokeT < 0.5f) {
-          _disp->fillCircle(smoke[i].x, smokeY, currentR, SH110X_WHITE);
-        } else {
-          // Dissipate into smoke wisps
-          _disp->drawCircle(smoke[i].x, smokeY, currentR, SH110X_WHITE);
-        }
-      }
-    }
-
-    // 5. Brand Name Text Reveal from Smoke (Stage 3)
-    if (t >= 0.30f) {
-      float textT = _clamp01((t - 0.30f) / 0.40f);
-
-      // Centered Brand Title "NANA" (Size 2: 4 chars * 12px = 48px -> x = 40)
+    if (elapsed < 3200) {
+      // ---------------------------------------------------------------------
+      // PAGE 1: Cursive "Nana" Logo + Heart Dot + Heart Flourish + Embedded Bot Eyes
+      // ---------------------------------------------------------------------
       _disp->setTextSize(2);
-      _drawWipeText("NANA", 40, 8, textT, 2);
 
-      // Subtitles
-      _drawWipeText("Your best Companion", 7, 30, _clamp01((t - 0.42f) / 0.35f), 1);
-      _drawWipeText("POWERED BY AJRGROUPS", 4, 46, _clamp01((t - 0.55f) / 0.30f), 1);
+      // Letter-by-letter reveal logic
+      int letterIndex = (int)(elapsed / 550);
+      if (letterIndex > 4) letterIndex = 4;
+
+      char textBuf[5] = "";
+      const char* fullText = "Nana";
+      for (int i = 0; i < letterIndex && i < 4; i++) {
+        textBuf[i] = fullText[i];
+      }
+      textBuf[letterIndex] = '\0';
+
+      // Cursive Text "Nana"
+      _disp->setCursor(14, 24);
+      _disp->print(textBuf);
+
+      // Solid Heart Dot above middle letter 'n' (reveals at stage 3)
+      if (elapsed > 1600) {
+        _drawHeart(46, 16, 3);
+      }
+
+      // Giant Sweeping Heart Flourish wrapping the right side (reveals at stage 4)
+      if (elapsed > 2000) {
+        _disp->drawCircle(102, 28, 14, SH110X_WHITE);
+        _disp->drawTriangle(88, 36, 116, 36, 102, 54, SH110X_WHITE);
+      }
+
+      // NANA's Dual Capsule Bot Eyes Embedded INSIDE the Heart Loop! (reveals at stage 5)
+      if (elapsed > 2500) {
+        // Left Capsule Eye
+        _disp->fillRoundRect(96, 24, 4, 7, 2, SH110X_WHITE);
+        // Right Capsule Eye
+        _disp->fillRoundRect(104, 24, 4, 7, 2, SH110X_WHITE);
+        // Micro Smile Curve
+        _disp->drawLine(98, 33, 104, 33, SH110X_WHITE);
+      }
+
+    } else {
+      // ---------------------------------------------------------------------
+      // PAGE 2: "Powered By AJRGroups" in Prominent Decorative Border & Glitter
+      // ---------------------------------------------------------------------
+      unsigned long p2Elapsed = elapsed - 3200;
+
+      // Prominent Decorative Double Border Badge Frame
+      _disp->drawRoundRect(4, 12, SCREEN_WIDTH - 8, 40, 5, SH110X_WHITE);
+      _disp->drawRoundRect(6, 14, SCREEN_WIDTH - 12, 36, 4, SH110X_WHITE);
+
+      // Dynamic Sparkling / Glitter Animation Particles Around Border
+      int glitterFrame = (p2Elapsed / 120) % 4;
+      if (glitterFrame == 0 || glitterFrame == 2) {
+        _disp->drawPixel(2, 10, SH110X_WHITE); _disp->drawPixel(SCREEN_WIDTH - 3, 10, SH110X_WHITE);
+        _disp->drawPixel(2, 53, SH110X_WHITE); _disp->drawPixel(SCREEN_WIDTH - 3, 53, SH110X_WHITE);
+        _disp->drawLine(12, 8, 16, 8, SH110X_WHITE); _disp->drawLine(14, 6, 14, 10, SH110X_WHITE);
+        _disp->drawLine(SCREEN_WIDTH - 16, 55, SCREEN_WIDTH - 12, 55, SH110X_WHITE);
+      } else {
+        _disp->drawPixel(3, 11, SH110X_WHITE); _disp->drawPixel(SCREEN_WIDTH - 4, 11, SH110X_WHITE);
+        _disp->drawPixel(3, 52, SH110X_WHITE); _disp->drawPixel(SCREEN_WIDTH - 4, 52, SH110X_WHITE);
+        _disp->drawLine(SCREEN_WIDTH - 16, 8, SCREEN_WIDTH - 12, 8, SH110X_WHITE);
+        _disp->drawLine(12, 55, 16, 55, SH110X_WHITE);
+      }
+
+      // Title & Subtitle inside Decorative Border
+      _disp->setTextSize(1);
+      _disp->setCursor(34, 20);
+      _disp->print("POWERED BY");
+
+      _disp->setCursor(24, 34);
+      _disp->print("AJRGROUPS");
 
       #if defined(SPEAKER_PIN)
       static bool chimePlayed = false;
-      if (t > 0.50f && !chimePlayed) {
+      if (p2Elapsed > 200 && !chimePlayed) {
         chimePlayed = true;
-        tone(SPEAKER_PIN, 880, 100);
-        delay(80);
-        tone(SPEAKER_PIN, 1046, 100);
-        delay(80);
-        tone(SPEAKER_PIN, 1318, 150);
+        if (settings_get().soundMode != SOUND_MUTE) {
+          // Executive Corporate Arpeggio (C5 -> E5 -> G5 -> B5 -> C6)
+          tone(SPEAKER_PIN, 523, 60);  delay(65);  // C5
+          tone(SPEAKER_PIN, 659, 60);  delay(65);  // E5
+          tone(SPEAKER_PIN, 784, 60);  delay(65);  // G5
+          tone(SPEAKER_PIN, 988, 80);  delay(85);  // B5
+          tone(SPEAKER_PIN, 1046, 180);           // High C6 resolution tone
+        }
       }
       #endif
     }
@@ -599,7 +638,7 @@ void faces_drawWave() {
 }
 
 void faces_playBootHandshake() {
-  const unsigned long DURATION = 7500;
+  const unsigned long DURATION = 3500;
   unsigned long start = millis();
   while (millis() - start < DURATION) {
     unsigned long elapsed = millis() - start;
@@ -607,7 +646,7 @@ void faces_playBootHandshake() {
 
     _disp->clearDisplay();
 
-    if (elapsed < 2500) {
+    if (elapsed < 1200) {
       // Slide 1: Personalized Greeting - Hi Jayakumar ✨
       _drawWaveHand((int)rock);
 
@@ -626,7 +665,7 @@ void faces_playBootHandshake() {
       _disp->setCursor(14, 4);
       _disp->print("Hi Jayakumar ");
       _disp->print(starFrame == 0 ? "*" : "+"); // Glitter symbol
-    } else if (elapsed < 5000) {
+    } else if (elapsed < 2400) {
       // Slide 2: Sales pitch - Smart Desktop AI Companion
       _disp->setTextSize(1);
       _disp->setCursor(10, 14);
@@ -1046,31 +1085,121 @@ void faces_drawClock() {
   _disp->display();
 }
 
-// ---------------------------------------------------------------------------
-// Settings menu
-// ---------------------------------------------------------------------------
-void faces_drawSettingsMenu(int itemIndex) {
+void faces_drawSettingsMenu(int itemIndex, bool isSubOptionOpen = false) {
   _disp->clearDisplay();
+
+  // 1. Vintage Nokia Pixel Frame Border (Double Outer Lines)
+  _disp->drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, SH110X_WHITE);
+  _disp->drawRect(2, 2, SCREEN_WIDTH - 4, SCREEN_HEIGHT - 4, SH110X_WHITE);
+
+  // 2. Vintage Nokia Header Banner (Top Bar)
+  _disp->fillRect(3, 3, SCREEN_WIDTH - 6, 12, SH110X_WHITE);
+  _disp->setTextColor(SH110X_BLACK, SH110X_WHITE);
   _disp->setTextSize(1);
-  _disp->setCursor(0, 0);
-  _disp->println("SETTINGS (tap=next,");
-  _disp->println("2x tap=change/play, hold=save)");
-  _disp->println("");
+
+  if (!isSubOptionOpen) {
+    _disp->setCursor(6, 5);
+    _disp->print("NANA MENU");
+
+    char counterStr[10];
+    sprintf(counterStr, "[%d/%d]", itemIndex + 1, SETTINGS_ITEM_COUNT);
+    _disp->setCursor(SCREEN_WIDTH - 44, 5);
+    _disp->print(counterStr);
+  } else {
+    _disp->setCursor(6, 5);
+    _disp->print("> SUB OPTION <");
+    _disp->setCursor(SCREEN_WIDTH - 44, 5);
+    _disp->print("[EDIT]");
+  }
 
   ChotubotSettings &s = settings_get();
-  const char* labels[SETTINGS_ITEM_COUNT] = { "Idle timeout", "Time format", "Single tap", "Play Game" };
-  String values[SETTINGS_ITEM_COUNT] = {
-    String(s.idleTimeoutMinutes) + " min",
-    s.use24HourFormat ? "24h" : "12h",
-    s.singleTapAction == TAP_ACTION_SHOW_TIME ? "Time" : (s.singleTapAction == TAP_ACTION_PLAY_DINO ? "Game" : "Off"),
-    "Dino Run >"
+
+  const char* labels[SETTINGS_ITEM_COUNT] = {
+    "Play Game",
+    "Sound Mode",
+    "Idle Timeout",
+    "Time Format",
+    "Single Tap"
   };
 
-  for (int i = 0; i < SETTINGS_ITEM_COUNT; i++) {
-    _disp->print(i == itemIndex ? ">" : " ");
-    _disp->print(labels[i]);
-    _disp->print(":");
-    _disp->println(values[i]);
+  const char* soundLabels[] = { "Normal", "Silent", "Quiet" };
+  String values[SETTINGS_ITEM_COUNT] = {
+    "Dino Run >",
+    soundLabels[(int)s.soundMode % 3],
+    String(s.idleTimeoutMinutes) + " min",
+    s.use24HourFormat ? "24 Hours" : "12 Hours",
+    s.singleTapAction == TAP_ACTION_SHOW_TIME ? "Clock" : (s.singleTapAction == TAP_ACTION_PLAY_DINO ? "Game" : "Off")
+  };
+
+  const uint8_t* icons[SETTINGS_ITEM_COUNT] = {
+    icon_nokia_game,
+    icon_nokia_sound,
+    icon_nokia_clock,
+    icon_nokia_timefmt,
+    icon_nokia_touch
+  };
+
+  if (!isSubOptionOpen) {
+    // -----------------------------------------------------------------------
+    // LEVEL 1: Vintage Nokia Main Menu Option Card
+    // -----------------------------------------------------------------------
+    _disp->drawRoundRect(6, 18, SCREEN_WIDTH - 12, 31, 3, SH110X_WHITE);
+
+    // Draw 12x12 Nokia Bitmap Icon for current option
+    _disp->drawBitmap(12, 27, icons[itemIndex], 12, 12, SH110X_WHITE);
+
+    // Option Title & Current Value
+    _disp->setTextColor(SH110X_WHITE);
+    _disp->setTextSize(1);
+    _disp->setCursor(30, 23);
+    _disp->print(labels[itemIndex]);
+
+    _disp->setCursor(30, 35);
+    if (itemIndex == 0) {
+      _disp->print(">> ENTER 2x");
+    } else {
+      _disp->print("Val: ");
+      _disp->print(values[itemIndex]);
+    }
+
+    // Right Cursor Arrow
+    _disp->setCursor(SCREEN_WIDTH - 16, 28);
+    _disp->print(">");
+
+    // Vintage Softkey Action Bar
+    _disp->drawLine(3, 50, SCREEN_WIDTH - 4, 50, SH110X_WHITE);
+    _disp->setCursor(6, 53);
+    _disp->print(itemIndex == 0 ? "2x:PLAY" : "2x:ENTER");
+    _disp->setCursor(SCREEN_WIDTH - 52, 53);
+    _disp->print("HOLD:EXIT");
+
+  } else {
+    // -----------------------------------------------------------------------
+    // LEVEL 2: Vintage Nokia Sub-Option Value Editor
+    // -----------------------------------------------------------------------
+    _disp->drawBitmap(12, 22, icons[itemIndex], 12, 12, SH110X_WHITE);
+    _disp->setTextColor(SH110X_WHITE);
+    _disp->setTextSize(1);
+    _disp->setCursor(30, 22);
+    _disp->print(labels[itemIndex]);
+
+    // Value Selector Card: [< VALUE >]
+    _disp->fillRoundRect(10, 36, SCREEN_WIDTH - 20, 13, 2, SH110X_WHITE);
+    _disp->setTextColor(SH110X_BLACK, SH110X_WHITE);
+
+    String valStr = "< " + values[itemIndex] + " >";
+    int16_t bx, by; uint16_t bw, bh;
+    _disp->getTextBounds(valStr.c_str(), 0, 0, &bx, &by, &bw, &bh);
+    _disp->setCursor((SCREEN_WIDTH - bw) / 2, 39);
+    _disp->print(valStr);
+
+    // Vintage Softkey Action Bar
+    _disp->drawLine(3, 50, SCREEN_WIDTH - 4, 50, SH110X_WHITE);
+    _disp->setTextColor(SH110X_WHITE);
+    _disp->setCursor(6, 53);
+    _disp->print("1x:CHANGE");
+    _disp->setCursor(SCREEN_WIDTH - 50, 53);
+    _disp->print("2x:BACK");
   }
 
   _disp->display();

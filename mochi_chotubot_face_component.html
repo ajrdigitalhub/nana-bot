@@ -7,8 +7,9 @@
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Parisienne&family=Alex+Brush&family=Sacramento&family=Great+Vibes&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 
   <style>
     :root {
@@ -21,6 +22,213 @@
       --accent-green: #22c55e;
       --accent-red: #ef4444;
       --accent-amber: #f59e0b;
+    }
+
+    /* 
+     * MULTI-PAGE STARTUP OVERLAY & ANIMATION STYLES
+     */
+    .startup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #030712;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .startup-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Page 1 & Page 2 Containers */
+    .startup-page {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+      pointer-events: none;
+    }
+
+    .startup-page.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Page 1: Stylish Cursive Handwriting Pen-Writing Engine */
+    .cursive-writing-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .pen-tip-icon {
+      position: absolute;
+      top: 20%;
+      left: 24%;
+      font-size: 2.6rem;
+      z-index: 10;
+      opacity: 0;
+      transform: translate(-50%, -50%) rotate(-20deg);
+      transition: left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.55s ease, opacity 0.3s ease;
+      filter: drop-shadow(0 0 12px #f59e0b) drop-shadow(0 0 24px #38bdf8);
+      pointer-events: none;
+    }
+
+    .pen-writing-svg {
+      width: 100%;
+      height: auto;
+      max-height: 200px;
+      overflow: visible;
+    }
+
+    .pen-drawn-text {
+      font-family: 'Parisienne', 'Alex Brush', 'Sacramento', 'Great Vibes', cursive;
+      font-size: 8.2rem;
+      font-weight: 700;
+      fill: transparent;
+      stroke: url(#penStrokeGlow);
+      stroke-width: 2.4px;
+      stroke-dasharray: 700;
+      stroke-dashoffset: 700;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.85)) drop-shadow(0 0 35px rgba(255, 255, 255, 0.7));
+      transition: stroke-dashoffset 2.2s cubic-bezier(0.25, 1, 0.5, 1), fill 0.6s ease;
+    }
+
+    .pen-drawn-text.filled {
+      fill: #ffffff;
+      stroke: #38bdf8;
+    }
+
+    .pen-letter {
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+
+    .pen-letter.written {
+      opacity: 1;
+    }
+
+    /* Heart Dot above 'n' & Giant Sweeping Heart Flourish */
+    .heart-dot {
+      opacity: 0;
+      transform: scale(0.5);
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      filter: drop-shadow(0 0 10px #38bdf8);
+    }
+
+    .heart-dot.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .heart-flourish-path {
+      stroke-dasharray: 450;
+      stroke-dashoffset: 450;
+      filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.9));
+      transition: stroke-dashoffset 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .heart-eyes-group {
+      opacity: 0;
+      transform: scale(0.8);
+      transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .heart-eyes-group.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Page 2: Powered By AJRGroups with Decorative Border & Glitter */
+    .powered-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .powered-badge {
+      position: relative;
+      padding: 24px 42px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 2px solid rgba(56, 189, 248, 0.7);
+      box-shadow: 0 0 35px rgba(56, 189, 248, 0.4), inset 0 0 18px rgba(56, 189, 248, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Prominent Outer Decorative Border */
+    .powered-badge::before {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: -8px;
+      right: -8px;
+      bottom: -8px;
+      border-radius: 22px;
+      border: 1px dashed rgba(245, 158, 11, 0.7);
+      animation: borderRotate 14s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes borderRotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .glitter-text {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      background: linear-gradient(90deg, #38bdf8, #ffffff, #f59e0b, #ec4899, #38bdf8);
+      background-size: 250% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: glitterShimmer 2.4s linear infinite;
+      text-transform: uppercase;
+    }
+
+    @keyframes glitterShimmer {
+      0% { background-position: 0% center; }
+      100% { background-position: 250% center; }
+    }
+
+    /* Dynamic Sparkling Star Particles Around Border */
+    .star-sparkle {
+      position: absolute;
+      font-size: 1.2rem;
+      animation: sparkleTwinkle 1.2s ease-in-out infinite alternate;
+    }
+
+    .star-sparkle.s1 { top: -16px; left: -16px; animation-delay: 0s; }
+    .star-sparkle.s2 { top: -16px; right: -16px; animation-delay: 0.3s; }
+    .star-sparkle.s3 { bottom: -16px; left: -16px; animation-delay: 0.6s; }
+    .star-sparkle.s4 { bottom: -16px; right: -16px; animation-delay: 0.9s; }
+
+    @keyframes sparkleTwinkle {
+      0% { transform: scale(0.6) rotate(0deg); opacity: 0.3; }
+      100% { transform: scale(1.35) rotate(45deg); opacity: 1; filter: drop-shadow(0 0 8px #f59e0b); }
     }
 
     * {
@@ -259,8 +467,63 @@
       box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
     }
   </style>
-</head>
 <body>
+
+  <!-- MULTI-PAGE STARTUP SEQUENCE OVERLAY -->
+  <div class="startup-overlay" id="startupOverlay">
+    <!-- Page 1: Stylish Cursive Handwriting Pen-Writing Animation -->
+    <div class="startup-page active" id="startupPage1">
+      <div class="cursive-writing-wrapper">
+        <!-- Dynamic Pen Tip Icon -->
+        <div class="pen-tip-icon" id="penTipIcon">✒️</div>
+
+        <!-- SVG Pen-Drawn Cursive Text Canvas -->
+        <svg class="pen-writing-svg" viewBox="0 0 620 180" id="penWritingSvg">
+          <defs>
+            <linearGradient id="penStrokeGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="50%" stop-color="#38bdf8" />
+              <stop offset="100%" stop-color="#ffffff" />
+            </linearGradient>
+          </defs>
+
+          <!-- 1. Stylish Cursive Calligraphy Text "Nana" -->
+          <text x="38%" y="64%" text-anchor="middle" class="pen-drawn-text" id="penDrawnText">
+            <tspan class="pen-letter" id="letterN1">N</tspan><tspan class="pen-letter" id="letterA1">a</tspan><tspan class="pen-letter" id="letterN2">n</tspan><tspan class="pen-letter" id="letterA2">a</tspan>
+          </text>
+
+          <!-- 2. Solid Heart Dot above middle letter 'n' -->
+          <path id="heartDot" class="heart-dot" d="M 240 28 C 235 18 223 20 223 28 C 223 37 240 45 240 45 C 240 45 257 37 257 28 C 257 20 245 18 240 28 Z" fill="#38bdf8" />
+
+          <!-- 3. Giant Sweeping Decorative Heart Flourish wrapping the right side -->
+          <path id="giantHeartFlourish" class="heart-flourish-path" d="M 370 100 C 355 45 405 12 455 24 C 512 36 525 85 450 135 C 410 160 375 140 365 120" fill="none" stroke="url(#penStrokeGlow)" stroke-width="4.2" stroke-linecap="round" />
+
+          <!-- 4. NANA's Dual Capsule Bot Eyes Embedded INSIDE the Heart Loop -->
+          <g id="heartEmbeddedEyes" class="heart-eyes-group">
+            <!-- Left Capsule Bot Eye -->
+            <rect x="432" y="48" width="16" height="22" rx="7" fill="#ffffff" filter="drop-shadow(0 0 10px #38bdf8)"/>
+            <!-- Right Capsule Bot Eye -->
+            <rect x="458" y="48" width="16" height="22" rx="7" fill="#ffffff" filter="drop-shadow(0 0 10px #38bdf8)"/>
+            <!-- Cute Smile Arch cut underneath eyes -->
+            <path d="M 442 76 Q 453 83 464 76" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Page 2: "Powered By AJRGroups" with Decorative Border & Glitter -->
+    <div class="startup-page" id="startupPage2">
+      <div class="powered-container">
+        <div class="powered-badge">
+          <span class="star-sparkle s1">✨</span>
+          <span class="star-sparkle s2">⭐</span>
+          <span class="star-sparkle s3">⭐</span>
+          <span class="star-sparkle s4">✨</span>
+          <h2 class="glitter-text">Powered By AJRGroups</h2>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="dashboard-header">
     <h1>Mochi Commercial Avatar Expression Engine</h1>
@@ -725,25 +988,135 @@
         mouthPath.setAttribute('d', `M 126 126 Q 140 ${136 + chewShift} 154 126`);
       }
 
-      // Unified Single Transform String
+      // Unified Eye & Mouth Synced Transform Engine
       const eyeTransform = `translate(${curMouseX}px, ${curMouseY + breathY}px) scale(${curScaleX * heartScale}, ${finalScaleY * heartScale}) rotate(${curRot}deg)`;
       leftEyeGroup.style.transform = eyeTransform;
       rightEyeGroup.style.transform = eyeTransform;
+
+      // Mouth is 100% synced to eye drift, breathing, tilt & blink micro-reaction!
+      const mouthGroup = document.getElementById('mouthGroup');
+      if (mouthGroup) {
+        const mouthBlinkNudge = isBlinkingNow ? 1.2 : 0.0;
+        const mouthTransform = `translate(${curMouseX * 0.85}px, ${curMouseY * 0.85 + breathY * 0.9 + mouthBlinkNudge}px) rotate(${curRot * 0.75}deg)`;
+        mouthGroup.style.transform = mouthTransform;
+        mouthGroup.style.transformOrigin = "140px 124px";
+      }
+    }
+
+    // Deterministic JS Promise Timer Helper for fixed loader sequence
+    function waitMs(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function runStartupSequence() {
+      const overlay = document.getElementById('startupOverlay');
+      const page1 = document.getElementById('startupPage1');
+      const page2 = document.getElementById('startupPage2');
+      const penTip = document.getElementById('penTipIcon');
+      const penText = document.getElementById('penDrawnText');
+      const heartDot = document.getElementById('heartDot');
+      const giantHeartFlourish = document.getElementById('giantHeartFlourish');
+      const heartEmbeddedEyes = document.getElementById('heartEmbeddedEyes');
+
+      const letters = [
+        { el: document.getElementById('letterN1'), left: '20%', top: '22%' },
+        { el: document.getElementById('letterA1'), left: '33%', top: '34%' },
+        { el: document.getElementById('letterN2'), left: '44%', top: '34%' },
+        { el: document.getElementById('letterA2'), left: '55%', top: '34%' }
+      ];
+
+      // Reset state & initialize elements
+      overlay.classList.remove('hidden');
+      page1.classList.add('active');
+      page2.classList.remove('active');
+
+      if (penText) {
+        penText.classList.remove('filled');
+        penText.style.transition = 'none';
+        penText.style.strokeDashoffset = '700';
+      }
+
+      if (giantHeartFlourish) {
+        giantHeartFlourish.style.transition = 'none';
+        giantHeartFlourish.style.strokeDashoffset = '450';
+      }
+
+      if (heartDot) heartDot.classList.remove('visible');
+      if (heartEmbeddedEyes) heartEmbeddedEyes.classList.remove('visible');
+      if (penTip) penTip.style.opacity = '0';
+      letters.forEach(l => l.el && l.el.classList.remove('written'));
+
+      await waitMs(250);
+
+      // 1. Pen tip icon appears at starting letter position
+      if (penTip) {
+        penTip.style.left = letters[0].left;
+        penTip.style.top = letters[0].top;
+        penTip.style.opacity = '1';
+      }
+
+      await waitMs(200);
+
+      // 2. Start smooth SVG text stroke drawing animation
+      if (penText) {
+        void penText.offsetWidth; // Force layout reflow
+        penText.style.transition = 'stroke-dashoffset 2.0s cubic-bezier(0.25, 1, 0.5, 1)';
+        penText.style.strokeDashoffset = '0';
+      }
+
+      // 3. Move pen tip icon across letters dynamically as they write!
+      for (let i = 0; i < letters.length; i++) {
+        if (penTip) {
+          penTip.style.left = letters[i].left;
+          penTip.style.top = letters[i].top;
+        }
+        if (letters[i].el) letters[i].el.classList.add('written');
+        await waitMs(480);
+      }
+
+      // 4. Solid Heart Dot pops above middle letter 'n'
+      if (heartDot) heartDot.classList.add('visible');
+      if (penText) penText.classList.add('filled');
+      await waitMs(300);
+
+      // 5. Pen moves to draw giant sweeping heart flourish around right side
+      if (penTip) {
+        penTip.style.left = '74%';
+        penTip.style.top = '18%';
+      }
+      if (giantHeartFlourish) {
+        void giantHeartFlourish.offsetWidth;
+        giantHeartFlourish.style.transition = 'stroke-dashoffset 1.4s cubic-bezier(0.4, 0, 0.2, 1)';
+        giantHeartFlourish.style.strokeDashoffset = '0';
+      }
+      await waitMs(1200);
+
+      // 6. NANA's dual capsule bot eyes illuminate & blink INSIDE the giant heart loop!
+      if (heartEmbeddedEyes) heartEmbeddedEyes.classList.add('visible');
+      if (penTip) penTip.style.opacity = '0';
+
+      await waitMs(1100); // Hold complete Naña logo + bot eyes inside heart
+
+      // Transition Page 1 -> Page 2
+      page1.classList.remove('active');
+      await waitMs(350);
+      page2.classList.add('active');
+
+      // Page 2: "Powered By AJRGroups" Display with Glitter (3.2s fixed duration)
+      await waitMs(3200);
+
+      // Hide overlay and reveal main robot avatar
+      overlay.classList.add('hidden');
     }
 
     function playRocketIntro() {
-      const btn = document.getElementById('rocketIntroBtn');
-      btn.classList.add('active');
-      statusText.textContent = "State: 🚀 NANA - Your best Companion by AJRGROUPS";
-
-      // Trigger happy expression as rocket blasts off
-      setEmotion('happy');
-
-      setTimeout(() => {
-        btn.classList.remove('active');
-        setEmotion('idle');
-      }, 4200);
+      runStartupSequence();
     }
+
+    // Trigger Multi-Page Startup Sequence on Load
+    window.addEventListener('load', () => {
+      runStartupSequence();
+    });
 
     // Start 60fps Loop & Initialize Default State
     startAutoRandomTimer();

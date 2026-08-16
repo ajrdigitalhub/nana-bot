@@ -122,11 +122,11 @@ void setup() {
   delay(200);
 
   Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
-  Wire.setClock(400000); // 400kHz Fast-Mode I2C bus speed for 8x faster OLED redraws
   if (!display.begin(SCREEN_I2C_ADDR, true)) {
     Serial.println("Display allocation failed — check wiring, I2C address, and driver chip (SSD1306 vs SH1106)");
     while (true) { delay(1000); } // halt here rather than run with an uninitialized display
   }
+  Wire.setClock(400000); // 400kHz Fast-Mode I2C bus speed set AFTER display.begin() so Adafruit GFX won't reset it to 100kHz!
   display.clearDisplay();
   display.display();
 
@@ -147,7 +147,7 @@ void setup() {
   // the handshake greeting. (Stage 3, the connection loading bar, happens
   // inside connectToWiFi() and connectToFirebase() below, since it's wired
   // to real progress rather than a fixed duration.)
-  faces_playInitialDelay(5000);
+  faces_playInitialDelay(1000);
   faces_playBootIntro();
   faces_playBootHandshake();
 
@@ -245,7 +245,8 @@ void fetchIPWeather() {
 
   WiFiClient client;
   HTTPClient http;
-  http.setTimeout(5000);
+  http.setTimeout(1500);
+  http.setConnectTimeout(1500);
 
   // 1. Get location via IP
   http.begin(client, "http://ip-api.com/json/");
@@ -348,10 +349,9 @@ String fetchCustomToken() {
   http.begin(client, TOKEN_FUNCTION_URL);
   http.addHeader("Content-Type", "application/json");
   // Cloud Functions can take several seconds on a cold start or right after
-  // an IAM permission change propagates — the default ~5s HTTPClient
-  // timeout was cutting this off before the response arrived.
-  http.setTimeout(20000);
-  http.setConnectTimeout(20000);
+  // an IAM permission change propagates — set a 10s timeout to allow completion.
+  http.setTimeout(10000);
+  http.setConnectTimeout(10000);
 
   StaticJsonDocument<256> body;
   body["deviceId"] = deviceId;
@@ -374,98 +374,76 @@ String fetchCustomToken() {
 }
 
 void connectToFirebase() {
-  // "Loading your firmware..." — the label matches what was asked for,
-  // and unlike the WiFi phase, we DO control this wait loop directly, so
-  // the percentage during it is real elapsed-time progress, not decorative.
-  faces_drawLoadingProgress(40, "Loading your firmware...", LOAD_PENDING);
+  faces_drawLoadingProgress(40, "Connecting Cloud...", LOAD_PENDING);
   Serial.print("Free heap before Firebase connect: ");
   Serial.println(ESP.getFreeHeap());
 
   String customToken = fetchCustomToken();
-  if (customToken.length() == 0) {
-    Serial.println("Could not get custom token, restarting in 5s...");
-    delay(5000);
-    ESP.restart();
+  if (customToken.length() > 0) {
+    Serial.println("Custom token retrieved successfully.");
+  } else {
+    Serial.println("Warning: Custom token empty, using default RTDB configuration.");
   }
 
-  faces_drawLoadingProgress(60, "Loading your firmware...", LOAD_PROCESSING);
+  faces_drawLoadingProgress(60, "Connecting Cloud...", LOAD_PROCESSING);
 
   fbConfig.api_key = FIREBASE_API_KEY;
   fbConfig.database_url = FIREBASE_RTDB_URL;
+  fbConfig.timeout.serverResponse = 10000; // 10s timeout to allow mbedTLS handshake completion
+  fbConfig.timeout.rtdbKeepAlive = 45000;
 
+  if (customToken.length() > 0) {
+    Firebase.setCustomToken(&fbConfig, customToken.c_str());
+  }
+
+  // Configure response size limit to prevent memory exhaustion
+  fbdo.setResponseSize(2048);
+
+  // CRITICAL FIX: Firebase.begin MUST be called AFTER fbConfig.token.custom_token is populated!
   Firebase.begin(&fbConfig, &fbAuth);
   Firebase.reconnectWiFi(true);
 
-  // setBSSLBufferSize() is an ESP8266 (BearSSL)-only tuning knob — ESP32
-  // uses mbedTLS instead, which doesn't expose the same buffer-size control
-  // through this library, so this is guarded out on your board. Left here
-  // in case this code ever runs on an ESP8266 variant.
-  #if defined(ESP8266)
-  fbdo.setBSSLBufferSize(1024, 1024);
-  #endif
-
-  // This one DOES apply to ESP32 — caps how much of a server response
-  // Firebase buffers at once, which helps avoid heap exhaustion regardless
-  // of platform. Our commands/status payloads are small, so 2048 bytes is
-  // comfortably enough.
-  fbdo.setResponseSize(2048);
-
-  // Signs in using our pre-minted custom token (from requestDeviceToken).
-  // This is the correct call for this library version — earlier versions
-  // sometimes exposed this as a config.signer.tokens.custom_token field,
-  // which no longer exists.
-  Firebase.setCustomToken(&fbConfig, customToken.c_str());
-
-  // Real, live progress: the bar fills from 60% to 90% proportionally to
-  // how much of this 10s window has actually elapsed, re-drawn every
-  // iteration — this is genuinely reflecting wait state, not a fake timer.
+  // Wait for Firebase connection to become ready
   unsigned long start = millis();
-  const unsigned long TIMEOUT_MS = 10000;
+  const unsigned long TIMEOUT_MS = 12000;
   while (!Firebase.ready() && millis() - start < TIMEOUT_MS) {
     float elapsed = (float)(millis() - start) / TIMEOUT_MS;
     int pct = 60 + (int)(elapsed * 30.0f);
-    faces_drawLoadingProgress(pct, "Loading your firmware...", LOAD_PROCESSING);
-    delay(100);
+    faces_drawLoadingProgress(pct, "Connecting Cloud...", LOAD_PROCESSING);
+    delay(150);
   }
-  Serial.println(Firebase.ready() ? "Firebase ready" : "Firebase not ready (continuing anyway)");
 
-  faces_drawLoadingProgress(100, "Ready!", LOAD_COMPLETE);
-  delay(600);
+  if (Firebase.ready()) {
+    Serial.println("Firebase Connected & Ready!");
+    faces_drawLoadingProgress(100, "Connected!", LOAD_COMPLETE);
+  } else {
+    Serial.println("Firebase connection pending (will complete in background)");
+    faces_drawLoadingProgress(100, "Ready!", LOAD_COMPLETE);
+  }
+  delay(500);
 }
 
 // ---------------------------------------------------------------------------
 // Command polling
 // ---------------------------------------------------------------------------
-// Deliberately NOT using Firebase.RTDB.beginStream() here — that spins up
-// a persistent internal FreeRTOS task for the realtime stream, which is
-// what was causing the stack-overflow crash on this board (confirmed via
-// the FEATURE_FIREBASE toggle, and matches a known issue with this
-// library's async/stream task on ESP32). Polling instead runs entirely in
-// our own loop() — no extra task, no extra stack to overflow. The tradeoff
-// is up to ~1s of latency before a command reaches the board instead of
-// instant delivery, which isn't noticeable for this use case.
-//
-// Commands must be written as a JSON STRING value (not a nested object) —
-// see the app's commands.ts, which does database().ref(path).set(JSON.stringify(command)).
-// That lets us use the simpler, more reliably-documented getString()/stringData()
-// API instead of the JSON-object accessors.
 void pollForCommands() {
   unsigned long now = millis();
   if (now - lastCommandPollAt < COMMAND_POLL_INTERVAL_MS) return;
   lastCommandPollAt = now;
 
-  if (!Firebase.ready()) return;
+  if (WiFi.status() != WL_CONNECTED || !Firebase.ready()) return;
 
-  String path = "/devices/" + deviceId + "/commands/current";
-  if (Firebase.RTDB.getString(&fbdo, path.c_str())) {
+  static String commandPath = "/devices/" + deviceId + "/commands/current";
+  if (Firebase.RTDB.get(&fbdo, commandPath.c_str())) {
     String raw = fbdo.stringData();
-    if (raw.length() > 0 && raw != lastProcessedCommandRaw) {
+    if (raw.length() == 0 || raw == "null") {
+      raw = fbdo.jsonString();
+    }
+    if (raw.length() > 0 && raw != "null" && raw != lastProcessedCommandRaw) {
       lastProcessedCommandRaw = raw;
       handleIncomingMessage(raw);
     }
   }
-  // A failed get here is usually just "no command written yet" or a
-  // transient network hiccup — not worth spamming Serial every second.
 }
 
 // ---------------------------------------------------------------------------
@@ -475,15 +453,17 @@ void pushStatusPeriodically() {
   unsigned long now = millis();
   if (now - lastStatusPushAt < 30000) return; // every 30s
   lastStatusPushAt = now;
-  if (!Firebase.ready()) return;
+
+  if (WiFi.status() != WL_CONNECTED || !Firebase.ready()) return;
+
+  static String statusPath = "/devices/" + deviceId + "/status";
 
   FirebaseJson json;
   json.set("online", true);
   json.set("lastSeen", (int)(now));
   json.set("firmware", FIRMWARE_VERSION);
 
-  String path = "/devices/" + deviceId + "/status";
-  if (!Firebase.RTDB.setJSON(&fbdo, path.c_str(), &json)) {
+  if (!Firebase.RTDB.setJSON(&fbdo, statusPath.c_str(), &json)) {
     Serial.print("Status push failed: ");
     Serial.println(fbdo.errorReason());
   }
@@ -502,7 +482,7 @@ void pushStatusPeriodically() {
 //   {"type":"game","action":"start"}           // reaction game, see below
 // ---------------------------------------------------------------------------
 void handleIncomingMessage(const String &msg) {
-  StaticJsonDocument<4096> doc;
+  DynamicJsonDocument doc(1024);
   DeserializationError err = deserializeJson(doc, msg);
   if (err) {
     Serial.print("JSON parse failed: ");
@@ -701,20 +681,39 @@ void cycleDemoExpression() {
   }
 }
 
+static bool isSubOptionOpen = false;
+
 void handleSettingsTouch(TouchEvent ev) {
   if (ev == TOUCH_SINGLE_TAP) {
-    settingsMenuIndex = (settingsMenuIndex + 1) % SETTINGS_ITEM_COUNT;
+    if (!isSubOptionOpen) {
+      // Level 1: Scroll through main menu options (1/5 to 5/5)
+      settingsMenuIndex = (settingsMenuIndex + 1) % SETTINGS_ITEM_COUNT;
+    } else {
+      // Level 2: Sub-Option Value Editor -> Cycle/change option value
+      if (settingsMenuIndex == 1) settings_cycleSoundMode();
+      else if (settingsMenuIndex == 2) settings_cycleIdleTimeout();
+      else if (settingsMenuIndex == 3) settings_toggleTimeFormat();
+      else if (settingsMenuIndex == 4) settings_cycleTapAction();
+    }
 
   } else if (ev == TOUCH_DOUBLE_TAP) {
-    if (settingsMenuIndex == 0) settings_cycleIdleTimeout();
-    else if (settingsMenuIndex == 1) settings_toggleTimeFormat();
-    else if (settingsMenuIndex == 2) settings_cycleTapAction();
-    else if (settingsMenuIndex == 3) {
-      dino_startNewGame();
-      transitionTo(STATE_DINO_GAME, 0);
+    if (!isSubOptionOpen) {
+      if (settingsMenuIndex == 0) {
+        // Play Game -> start Dino game!
+        dino_startNewGame();
+        transitionTo(STATE_DINO_GAME, 0);
+      } else {
+        // Enter sub-option editor
+        isSubOptionOpen = true;
+      }
+    } else {
+      // Double tap inside sub-option editor -> SAVE & GO BACK to parent menu!
+      isSubOptionOpen = false;
+      settings_save();
     }
 
   } else if (ev == TOUCH_LONG_PRESS) {
+    isSubOptionOpen = false;
     settings_save();
     transitionTo(STATE_IDLE, 0);
   }
@@ -744,32 +743,35 @@ void handleTouchEvent(TouchEvent ev) {
 
   if (currentState == STATE_DINO_GAME) {
     if (ev == TOUCH_PRESS_DOWN || ev == TOUCH_SINGLE_TAP || ev == TOUCH_DOUBLE_TAP) {
-      dino_handleTap();
+      dino_jump();
     } else if (ev == TOUCH_LONG_PRESS || ev == TOUCH_HOLD_3SEC) {
-      // Continuously holding sensor for 3 seconds exits the game directly to STATE_IDLE!
       transitionTo(STATE_IDLE, 0);
     }
     return;
   }
 
-  switch (ev) {
-    case TOUCH_SINGLE_TAP:
-      if (settings_get().singleTapAction == TAP_ACTION_SHOW_TIME) {
-        transitionTo(STATE_SHOW_TIME, 6000);
-      } else if (settings_get().singleTapAction == TAP_ACTION_PLAY_DINO) {
-        dino_startNewGame();
-        transitionTo(STATE_DINO_GAME, 0);
-      }
-      break;
-    case TOUCH_DOUBLE_TAP:
-      cycleDemoExpression();
-      break;
-    case TOUCH_LONG_PRESS:
-      settingsMenuIndex = 0;
-      transitionTo(STATE_SETTINGS, 0);
-      break;
-    default:
-      break;
+  // Double tap while idle / active -> cycle demo expressions
+  if (ev == TOUCH_DOUBLE_TAP) {
+    cycleDemoExpression();
+    return;
+  }
+
+  // Single tap while idle / active -> custom tap action
+  if (ev == TOUCH_SINGLE_TAP) {
+    TouchSingleTapAction action = settings_get().singleTapAction;
+    if (action == TAP_ACTION_SHOW_TIME) {
+      transitionTo(STATE_SHOW_TIME, 6000);
+    } else if (action == TAP_ACTION_PLAY_DINO) {
+      dino_startNewGame();
+      transitionTo(STATE_DINO_GAME, 0);
+    }
+    return;
+  }
+
+  // Long press while idle / active -> open settings menu
+  if (ev == TOUCH_LONG_PRESS) {
+    transitionTo(STATE_SETTINGS, 0);
+    return;
   }
 }
 
@@ -780,6 +782,10 @@ void transitionTo(DeviceState next, unsigned long durationMs) {
   currentState = next;
   stateEnteredAt = millis();
   temporaryStateDurationMs = durationMs;
+
+  if (next == STATE_SETTINGS) {
+    isSubOptionOpen = false;
+  }
 
   // Every time we settle into idle — regardless of what path got us
   // here — the auto-expression timer restarts fresh. This guarantees a
@@ -882,7 +888,7 @@ void renderCurrentState() {
     case STATE_NAV_UTURN:       faces_drawNavArrow(NAV_DIR_UTURN); break;
     case STATE_CUSTOM_DOODLE:   faces_drawCustomDoodle(); break;
     case STATE_SHOW_TIME:       faces_drawClock(); break;
-    case STATE_SETTINGS:        faces_drawSettingsMenu(settingsMenuIndex); break;
+    case STATE_SETTINGS:        faces_drawSettingsMenu(settingsMenuIndex, isSubOptionOpen); break;
     default: break;
   }
 }

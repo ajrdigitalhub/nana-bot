@@ -27,18 +27,21 @@ inline void dino_initHardware() {
 }
 
 inline void dino_playJumpSound() {
-  if (!_dinoSpeakerEnabled) return;
-  tone(SPEAKER_PIN, 784, 60); // G5 quick non-blocking jump tone
+  if (settings_get().soundMode == SOUND_MUTE) return;
+  int freq = (settings_get().soundMode == SOUND_QUIET) ? 400 : 784;
+  tone(SPEAKER_PIN, freq, 60);
 }
 
 inline void dino_playScoreSound() {
-  if (!_dinoSpeakerEnabled) return;
-  tone(SPEAKER_PIN, 1318, 90); // E6 non-blocking milestone chime
+  if (settings_get().soundMode == SOUND_MUTE) return;
+  int freq = (settings_get().soundMode == SOUND_QUIET) ? 800 : 1318;
+  tone(SPEAKER_PIN, freq, 90);
 }
 
 inline void dino_playGameOverSound() {
-  if (!_dinoSpeakerEnabled) return;
-  tone(SPEAKER_PIN, 220, 250); // Low non-blocking game over buzz
+  if (settings_get().soundMode == SOUND_MUTE) return;
+  int freq = (settings_get().soundMode == SOUND_QUIET) ? 150 : 220;
+  tone(SPEAKER_PIN, freq, 250);
 }
 
 inline void dino_toggleSpeakerMode() {
