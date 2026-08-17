@@ -37,11 +37,31 @@ module.exports = {
           description: 'Assets destination directory',
           default: 'android/app/src/main/res',
         },
+        {
+          name: '--reset-cache',
+          description: 'Remove cached files',
+        },
+        {
+          name: '--sourcemap-output <string>',
+          description: 'File name where to store the sourcemap file',
+        },
+        {
+          name: '--minify [boolean]',
+          description: 'Allows overriding whether bundle is minified',
+          parse: (val) => val !== 'false',
+        },
+        {
+          name: '--config <string>',
+          description: 'Path to the CLI configuration file',
+        },
+        {
+          name: '--verbose',
+          description: 'Enables logging',
+        },
       ],
       func: async (argv, config, args) => {
         const cliPlugin = require('@react-native/community-cli-plugin');
-        const commands = cliPlugin.commands || cliPlugin;
-        const bundleCmd = Array.isArray(commands) ? commands.find((c) => c.name === 'bundle') : null;
+        const bundleCmd = cliPlugin.bundleCommand || (Array.isArray(cliPlugin.commands) ? cliPlugin.commands.find((c) => c.name === 'bundle') : null);
         const safeArgs = {
           platform: args.platform || 'android',
           entryFile: args.entryFile || 'index.js',
