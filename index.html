@@ -487,11 +487,55 @@
     </div>
   </div>
 
+  <!-- CHATBOT MODAL -->
+  <div class="modal-overlay" id="chatbotModal">
+    <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 16px; width: 100%; max-width: 380px; height: 85vh; display: flex; flex-direction: column;">
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--card-border); margin-bottom: 10px;">
+        <div>
+          <h2 style="font-size: 1rem; font-weight: 800; color: var(--text);">💬 NANA AI CHATBOT</h2>
+          <p style="font-size: 0.72rem; color: var(--text-sec);">Control & Message ESP32-C3</p>
+        </div>
+        <button onclick="closeChatbotModal()" style="background:none; border:none; color:var(--text-sec); font-size:1.2rem; cursor:pointer;">❌</button>
+      </div>
+
+      <!-- Messages Stream -->
+      <div id="chatStream" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; margin-bottom: 10px;">
+        <div style="background: var(--card-hover); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px; font-size: 0.8rem; line-height: 1.4; max-width: 85%;">
+          Hello! I am your Nana Bot AI Assistant 🤖. Ask me to change expressions, start games, adjust settings, or send custom text messages to your display screen!
+        </div>
+      </div>
+
+      <!-- Quick Action Chips -->
+      <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; scrollbar-width: none;">
+        <button class="cat-tab" onclick="sendChatFromChip('happy')">😊 Happy</button>
+        <button class="cat-tab" onclick="sendChatFromChip('play dino game')">🦖 Dino</button>
+        <button class="cat-tab" onclick="sendChatFromChip('drink water')">💧 Water</button>
+        <button class="cat-tab" onclick="sendChatFromChip('meal alert')">🍱 Meal</button>
+        <button class="cat-tab" onclick="sendChatFromChip('sleep')">🌙 Sleep</button>
+        <button class="cat-tab" onclick="sendChatFromChip('wake up')">☀️ Wake</button>
+      </div>
+
+      <!-- Input Bar -->
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <div style="flex: 1; position: relative;">
+          <input type="text" id="chatInput" placeholder="Command or text..." maxlength="60" oninput="updateChatCounter(this)" style="width: 100%; padding: 12px 10px; border-radius: 10px; background: #1e293b; color: #fff; border: 1px solid var(--card-border); font-size: 0.82rem;">
+          <span id="chatCharCounter" style="position: absolute; right: 8px; bottom: 2px; font-size: 0.65rem; color: var(--text-muted);">0/60</span>
+        </div>
+        <button class="btn-full" style="width: auto; padding: 12px 14px;" onclick="sendChatFromInput()">Send 🚀</button>
+      </div>
+    </div>
+  </div>
+
   <!-- BOTTOM NAVIGATION BAR -->
   <nav class="bottom-bar">
     <div class="tab-item active" onclick="window.scrollTo({top:0, behavior:'smooth'})">
       <span class="tab-icon">🏠</span>
       <span>Home</span>
+    </div>
+    <div class="tab-item" onclick="openChatbotModal()">
+      <span class="tab-icon">💬</span>
+      <span>Chatbot</span>
     </div>
     <div class="tab-item" onclick="openDoodleModal()">
       <span class="tab-icon">✏️</span>
@@ -703,6 +747,69 @@
 
       sendCommand({ type: 'doodle', bitmapBase64: b64, w: 128, h: 64, durationMs: 10000 });
       closeDoodleModal();
+    }
+
+    function openChatbotModal() {
+      document.getElementById('chatbotModal').classList.add('active');
+    }
+
+    function closeChatbotModal() {
+      document.getElementById('chatbotModal').classList.remove('active');
+    }
+
+    function updateChatCounter(input) {
+      document.getElementById('chatCharCounter').innerText = `${input.value.length}/60`;
+    }
+
+    function sendChatFromChip(text) {
+      document.getElementById('chatInput').value = text;
+      sendChatFromInput();
+    }
+
+    function sendChatFromInput() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      document.getElementById('chatCharCounter').innerText = '0/60';
+
+      const stream = document.getElementById('chatStream');
+      const userBubble = document.createElement('div');
+      userBubble.style.cssText = 'background: var(--accent-bg); border: 1px solid var(--accent); color: var(--accent); border-radius: 12px; padding: 10px; font-size: 0.8rem; line-height: 1.4; max-width: 85%; align-self: flex-end; font-weight: 600;';
+      userBubble.innerText = text;
+      stream.appendChild(userBubble);
+      stream.scrollTop = stream.scrollHeight;
+
+      const lower = text.toLowerCase();
+      let handled = false;
+      let reply = '';
+
+      if (lower.includes('happy')) { sendCommand({ type: 'expression', value: 'happy' }); reply = 'Executing Happy Smile on Nana Bot! 😊'; handled = true; }
+      else if (lower.includes('dino')) { sendCommand({ type: 'game', action: 'dino' }); reply = 'Launching Dino Runner game on OLED! 🦖'; handled = true; }
+      else if (lower.includes('water')) { sendCommand({ type: 'reminder', value: 'water' }); reply = 'Drink Water Hydration Alert triggered! 💧'; handled = true; }
+      else if (lower.includes('meal')) { sendCommand({ type: 'reminder', value: 'food' }); reply = 'Meal Time Alert triggered! 🍱'; handled = true; }
+      else if (lower.includes('sleep')) { sendCommand({ type: 'sleep' }); reply = 'Putting Nana Bot to Sleep Mode 🌙'; handled = true; }
+      else if (lower.includes('wake')) { sendCommand({ type: 'wake' }); reply = 'Waking up Nana Bot! ☀️'; handled = true; }
+
+      if (handled) {
+        setTimeout(() => {
+          const botBubble = document.createElement('div');
+          botBubble.style.cssText = 'background: var(--card-hover); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px; font-size: 0.8rem; line-height: 1.4; max-width: 85%; align-self: flex-start;';
+          botBubble.innerText = reply;
+          stream.appendChild(botBubble);
+          stream.scrollTop = stream.scrollHeight;
+        }, 300);
+      } else {
+        const msgId = 'msg_' + Date.now();
+        sendCommand({ type: 'chat_message', text: text, id: msgId });
+        setTimeout(() => {
+          const botBubble = document.createElement('div');
+          botBubble.style.cssText = 'background: var(--card-hover); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px; font-size: 0.8rem; line-height: 1.4; max-width: 85%; align-self: flex-start;';
+          botBubble.innerText = `Transmitted "${text}" to ${deviceId}'s screen as an animated chat bubble! 💬✨`;
+          stream.appendChild(botBubble);
+          stream.scrollTop = stream.scrollHeight;
+        }, 300);
+      }
     }
 
     function openSettingsModal() {
