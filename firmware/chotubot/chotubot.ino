@@ -407,56 +407,31 @@ void connectToFirebase() {
   Serial.print("Free heap before Firebase connect: ");
   Serial.println(ESP.getFreeHeap());
 
-  String customToken = fetchCustomToken();
-  if (customToken.length() > 0) {
-    Serial.println("Custom token retrieved successfully.");
-  } else {
-    Serial.println("Notice: Custom token not retrieved, operating in unauthenticated/fallback mode.");
-  }
-
   faces_drawLoadingProgress(60, "Connecting Cloud...", LOAD_PROCESSING);
 
   fbConfig.api_key = FIREBASE_API_KEY;
   fbConfig.database_url = FIREBASE_RTDB_URL;
   fbConfig.timeout.serverResponse = 10000;
   fbConfig.timeout.rtdbKeepAlive = 45000;
-  fbConfig.token_status_callback = tokenStatusCallback;
-
-  if (customToken.length() > 0) {
-    Firebase.setCustomToken(&fbConfig, customToken.c_str());
-    fbConfig.signer.test_mode = false;
-  } else {
-    fbConfig.signer.test_mode = true;
-  }
+  fbConfig.signer.test_mode = true;
+  fbConfig.signer.tokens.legacy_token = "";
 
   fbdo.setResponseSize(2048);
   fbdoStream.setResponseSize(2048);
   Firebase.begin(&fbConfig, &fbAuth);
   Firebase.reconnectWiFi(true);
 
-  // Quick initial check (1.5s max) so boot sequence completes fast while auth finishes in background
-  Serial.print("Authenticating with Firebase RTDB...");
-  unsigned long authStart = millis();
-  while (!Firebase.ready() && (millis() - authStart < 1500)) {
-    delay(100);
-  }
+  // Quick initial check (1.5s max) so boot sequence completes fast
+  Serial.print("Initializing Firebase Cloud Listener...");
+  delay(500);
   Serial.println();
-
-  if (Firebase.ready()) {
-    Serial.println("Firebase Authenticated & Ready!");
-  } else {
-    Serial.println("Firebase connecting in background (stream listener active)...");
-  }
 
   // Initialize Realtime SSE Stream Listener on commands/current
   static String commandPath = "/devices/" + deviceId + "/commands/current";
   Firebase.RTDB.beginStream(&fbdoStream, commandPath.c_str());
 
   faces_drawLoadingProgress(100, "Connected!", LOAD_COMPLETE);
-  Serial.println("Firebase Ready & Stream Active!");
-  if (Firebase.ready()) {
-    pushStatusNow();
-  }
+  Serial.println("Firebase Ready & Cloud Listener Active!");
   pushStatusNow();
   delay(300);
 }
@@ -471,17 +446,41 @@ double getEpochTimeMs() {
 }
 
 void pushStatusNow() {
-  if (WiFi.status() != WL_CONNECTED || !Firebase.ready()) return;
+  if (WiFi.status() != WL_CONNECTED) return;
   static String statusPath = "/devices/" + deviceId + "/status";
+  
   FirebaseJson json;
   json.set("online", true);
-  json.set("lastSeen", getEpochTimeMs());
+  json.set("lastSeen/.sv", "timestamp");
   json.set("firmware", FIRMWARE_VERSION);
-  if (Firebase.RTDB.setJSON(&fbdo, statusPath.c_str(), &json)) {
+
+  if (Firebase.ready() && Firebase.RTDB.setJSON(&fbdo, statusPath.c_str(), &json)) {
     Serial.println(">>> RTDB STATUS UPDATED: online=true");
   } else {
-    Serial.print(">>> RTDB STATUS ERROR: ");
-    Serial.println(fbdo.errorReason());
+    // Direct HTTP REST Fallback: Sends a clean HTTP PUT to RTDB endpoint
+    WiFiClientSecure client;
+    client.setInsecure();
+    HTTPClient http;
+    String url = String(FIREBASE_RTDB_URL) + statusPath + ".json";
+    http.begin(client, url);
+    http.addHeader("Content-Type", "application/json");
+    
+    StaticJsonDocument<128> doc;
+    doc["online"] = true;
+    doc["lastSeen"] = getEpochTimeMs();
+    doc["firmware"] = FIRMWARE_VERSION;
+    String body;
+    serializeJson(doc, body);
+    
+    int code = http.PUT(body);
+    if (code == 200) {
+      Serial.println(">>> RTDB STATUS UPDATED: online=true (via Direct REST)");
+    } else {
+      Serial.print(">>> RTDB STATUS ERROR (HTTP ");
+      Serial.print(code);
+      Serial.println(")");
+    }
+    http.end();
   }
   lastStatusPushAt = millis();
 }
@@ -491,10 +490,10 @@ void pushStatusNow() {
 // Realtime Stream Listener (<1ms Non-Blocking Execution)
 // ---------------------------------------------------------------------------
 void pollForCommands() {
-  if (WiFi.status() != WL_CONNECTED || !Firebase.ready()) return;
+  if (WiFi.status() != WL_CONNECTED) return;
 
   // 1. Process active Realtime SSE Stream push events immediately (< 1ms execution time)
-  if (Firebase.RTDB.readStream(&fbdoStream)) {
+  if (Firebase.ready() && Firebase.RTDB.readStream(&fbdoStream)) {
     if (fbdoStream.streamAvailable()) {
       String raw = fbdoStream.stringData();
       if (raw.length() == 0 || raw == "null") {
@@ -510,23 +509,26 @@ void pollForCommands() {
     }
   }
 
-  // 2. Safe Fallback Polling (only runs every 15s if stream is silent)
+  // 2. Direct REST Cloud Command Fetch (every 2.5s - ultra-fast & socket-safe)
   unsigned long now = millis();
-  if (now - lastCommandPollAt >= 15000) {
+  if (now - lastCommandPollAt >= 2500) {
     lastCommandPollAt = now;
-    static String commandPath = "/devices/" + deviceId + "/commands/current";
-    if (Firebase.RTDB.get(&fbdo, commandPath.c_str())) {
-      String raw = fbdo.stringData();
-      if (raw.length() == 0 || raw == "null") {
-        raw = fbdo.jsonString();
-      }
+    
+    WiFiClientSecure client;
+    client.setInsecure();
+    HTTPClient http;
+    static String commandUrl = String(FIREBASE_RTDB_URL) + "/devices/" + deviceId + "/commands/current.json";
+    http.begin(client, commandUrl);
+    http.setTimeout(1500);
+    int code = http.GET();
+    if (code == 200) {
+      String raw = http.getString();
       if (raw.length() > 0 && raw != "null" && raw != lastProcessedCommandRaw) {
         lastProcessedCommandRaw = raw;
-        Serial.print("[Poll] Fallback command fetched: ");
-        Serial.println(raw);
         handleIncomingMessage(raw);
       }
     }
+    http.end();
   }
 }
 
@@ -538,20 +540,42 @@ void pushStatusPeriodically() {
   if (now - lastStatusPushAt < 15000) return; // every 15s
   lastStatusPushAt = now;
 
-  if (WiFi.status() != WL_CONNECTED || !Firebase.ready()) return;
+  if (WiFi.status() != WL_CONNECTED) return;
 
   static String statusPath = "/devices/" + deviceId + "/status";
 
   FirebaseJson json;
   json.set("online", true);
-  json.set("lastSeen", getEpochTimeMs());
+  json.set("lastSeen/.sv", "timestamp");
   json.set("firmware", FIRMWARE_VERSION);
 
-  if (!Firebase.RTDB.setJSON(&fbdo, statusPath.c_str(), &json)) {
-    Serial.print("Status push failed: ");
-    Serial.println(fbdo.errorReason());
-  } else {
+  if (Firebase.ready() && Firebase.RTDB.setJSON(&fbdo, statusPath.c_str(), &json)) {
     Serial.println(">>> Periodic RTDB status push successful");
+  } else {
+    // Direct HTTP REST Fallback
+    WiFiClientSecure client;
+    client.setInsecure();
+    HTTPClient http;
+    String url = String(FIREBASE_RTDB_URL) + statusPath + ".json";
+    http.begin(client, url);
+    http.addHeader("Content-Type", "application/json");
+    
+    StaticJsonDocument<128> doc;
+    doc["online"] = true;
+    doc["lastSeen"] = getEpochTimeMs();
+    doc["firmware"] = FIRMWARE_VERSION;
+    String body;
+    serializeJson(doc, body);
+    
+    int code = http.PUT(body);
+    if (code == 200) {
+      Serial.println(">>> Periodic RTDB status push successful (via Direct REST)");
+    } else {
+      Serial.print("Status push failed (HTTP ");
+      Serial.print(code);
+      Serial.println(")");
+    }
+    http.end();
   }
 }
 
