@@ -83,20 +83,20 @@ export default function IntroSplashScreen({ onFinish }: Props) {
           },
         ]}
       >
-        {/* Neon Dual-Glow Halo Behind Logo */}
-        <Animated.View style={[styles.glowHalo, { opacity: glowAnim }]} />
-
         {/* Hero 3D NANA-BOT Logo Image */}
-        <Image source={nanaBotImg} style={styles.botImage} resizeMode="contain" />
+        <View style={styles.imageContainer}>
+          <Animated.View style={[styles.glowHalo, { opacity: glowAnim }]} />
+          <Image source={nanaBotImg} style={styles.botImage} resizeMode="contain" />
+        </View>
 
-        {/* Animated Cursive Handwriting Stroke Overlay */}
-        <View style={styles.svgOverlay}>
-          <Svg height="90" width="260" viewBox="0 0 300 120">
+        {/* Animated Cursive Handwriting Stroke Directly Below Bot Image */}
+        <View style={styles.textAnimContainer}>
+          <Svg height="75" width="260" viewBox="0 0 300 120">
             {/* Cursive N Letter */}
             <AnimatedPath
               d="M 25 90 C 20 60, 30 25, 45 20 C 50 18, 55 25, 50 45 C 45 65, 80 95, 90 30 C 92 20, 95 25, 92 40"
               stroke="#00E5FF"
-              strokeWidth="6"
+              strokeWidth="7"
               strokeLinecap="round"
               strokeLinejoin="round"
               fill="none"
@@ -107,7 +107,7 @@ export default function IntroSplashScreen({ onFinish }: Props) {
             <AnimatedPath
               d="M 95 65 C 90 50, 115 45, 120 65 C 125 85, 95 85, 100 65 C 105 45, 125 45, 130 85"
               stroke="#E040FB"
-              strokeWidth="6"
+              strokeWidth="7"
               strokeLinecap="round"
               strokeLinejoin="round"
               fill="none"
@@ -118,7 +118,7 @@ export default function IntroSplashScreen({ onFinish }: Props) {
             <AnimatedPath
               d="M 135 85 C 130 60, 140 45, 150 40 C 155 38, 160 45, 155 60 C 150 75, 180 90, 190 40 C 192 35, 195 40, 192 55"
               stroke="#00E5FF"
-              strokeWidth="6"
+              strokeWidth="7"
               strokeLinecap="round"
               strokeLinejoin="round"
               fill="none"
@@ -129,7 +129,7 @@ export default function IntroSplashScreen({ onFinish }: Props) {
             <AnimatedPath
               d="M 195 65 C 190 50, 215 45, 220 65 C 225 85, 195 85, 200 65 C 205 45, 230 45, 235 85 C 240 90, 260 75, 275 60"
               stroke="#E040FB"
-              strokeWidth="6"
+              strokeWidth="7"
               strokeLinecap="round"
               strokeLinejoin="round"
               fill="none"
@@ -183,13 +183,18 @@ const styles = StyleSheet.create({
   centerBox: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  imageContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
+    marginBottom: 6,
   },
   glowHalo: {
     position: 'absolute',
-    width: 240,
-    height: 240,
-    borderRadius: 120,
+    width: 210,
+    height: 210,
+    borderRadius: 105,
     backgroundColor: '#00E5FF20',
     shadowColor: '#E040FB',
     shadowOffset: { width: 0, height: 0 },
@@ -198,20 +203,20 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   botImage: {
-    width: 240,
-    height: 240,
+    width: 210,
+    height: 210,
   },
-  svgOverlay: {
-    position: 'absolute',
-    bottom: 34,
+  textAnimContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 2,
   },
   tagline: {
     fontSize: 12,
     fontWeight: '800',
     color: '#00E5FF',
     letterSpacing: 3,
-    marginTop: -8,
+    marginTop: 4,
     textAlign: 'center',
   },
   bottomBranding: {
