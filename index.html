@@ -441,19 +441,69 @@
     </div>
   </div>
 
+  <!-- SETTINGS MODAL -->
+  <div class="modal-overlay" id="settingsModal">
+    <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; width: 100%; max-width: 360px; max-height: 85vh; overflow-y: auto;">
+      <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; color: var(--accent);">⚙️ DEVICE CONFIGURATION</h2>
+      <p style="font-size: 0.75rem; color: var(--text-sec); margin-bottom: 16px;">Configure preferences for device <span id="settingsDeviceId"></span></p>
+
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 6px;">🔊 Audio & Beep Mode</label>
+        <select id="setSndMode" onchange="applyWebSetting('sndMode', parseInt(this.value))" style="width:100%; padding:10px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid var(--card-border);">
+          <option value="0">🔊 Normal Sound</option>
+          <option value="2">🔈 Quiet Beep</option>
+          <option value="1">🔇 Mute Silent</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 6px;">💤 Idle Sleep Timeout</label>
+        <select id="setIdleMin" onchange="applyWebSetting('idleMin', parseInt(this.value))" style="width:100%; padding:10px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid var(--card-border);">
+          <option value="1">1 Minute</option>
+          <option value="5" selected>5 Minutes</option>
+          <option value="10">10 Minutes</option>
+          <option value="15">15 Minutes</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 6px;">🕒 Time Clock Format</label>
+        <select id="setUse24h" onchange="applyWebSetting('use24h', this.value === 'true')" style="width:100%; padding:10px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid var(--card-border);">
+          <option value="true" selected>24-Hour (15:45)</option>
+          <option value="false">12-Hour (3:45 PM)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 6px;">👆 Touch Single-Tap Action</label>
+        <select id="setTapAction" onchange="applyWebSetting('tapAction', parseInt(this.value))" style="width:100%; padding:10px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid var(--card-border);">
+          <option value="0">🕒 Show Time Clock</option>
+          <option value="1">🦖 Launch Dino Runner</option>
+          <option value="2">🚫 Disabled</option>
+        </select>
+      </div>
+
+      <button class="btn-full" style="background: var(--card-bg); color: var(--text); border-color: var(--card-border); margin-top: 10px;" onclick="closeSettingsModal()">❌ Close Settings</button>
+    </div>
+  </div>
+
   <!-- BOTTOM NAVIGATION BAR -->
   <nav class="bottom-bar">
-    <div class="tab-item active">
+    <div class="tab-item active" onclick="window.scrollTo({top:0, behavior:'smooth'})">
       <span class="tab-icon">🏠</span>
       <span>Home</span>
     </div>
+    <div class="tab-item" onclick="openDoodleModal()">
+      <span class="tab-icon">✏️</span>
+      <span>Doodle</span>
+    </div>
     <div class="tab-item" onclick="sendGameCommand('dino')">
       <span class="tab-icon">🦖</span>
-      <span>Dino Runner</span>
+      <span>Dino</span>
     </div>
-    <div class="tab-item" onclick="sendGameCommand('start')">
-      <span class="tab-icon">⚡</span>
-      <span>Reaction</span>
+    <div class="tab-item" onclick="openSettingsModal()">
+      <span class="tab-icon">⚙️</span>
+      <span>Settings</span>
     </div>
   </nav>
 
@@ -653,6 +703,24 @@
 
       sendCommand({ type: 'doodle', bitmapBase64: b64, w: 128, h: 64, durationMs: 10000 });
       closeDoodleModal();
+    }
+
+    function openSettingsModal() {
+      document.getElementById('settingsDeviceId').innerText = deviceId;
+      document.getElementById('settingsModal').classList.add('active');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.remove('active');
+    }
+
+    function applyWebSetting(key, val) {
+      const payload = { type: 'settings' };
+      payload[key] = val;
+      sendCommand(payload);
+      const updates = {};
+      updates[key] = val;
+      db.ref(`/devices/${deviceId}/settings`).update(updates);
     }
 
     // Initialize Page
