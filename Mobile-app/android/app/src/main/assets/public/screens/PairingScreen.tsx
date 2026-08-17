@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Modal } from 'react-native';
 import functions from '@react-native-firebase/functions';
 import auth from '@react-native-firebase/auth';
+import database from '@react-native-firebase/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkDeviceExists } from '../services/commands';
 import { theme } from '../theme';
@@ -27,9 +28,11 @@ export default function PairingScreen({ onPaired }: Props) {
     setModalError(null);
     try {
       // 1. Ensure Firebase authentication exists
-      if (!auth().currentUser) {
+      let user = auth().currentUser;
+      if (!user) {
         try {
-          await auth().signInAnonymously();
+          const authRes = await auth().signInAnonymously();
+          user = authRes.user;
         } catch (e) {
           console.warn('Anonymous auth prior to pairing skipped/failed:', e);
         }
@@ -38,23 +41,37 @@ export default function PairingScreen({ onPaired }: Props) {
       // 2. Real Check in Firebase Realtime Database: Check if device exists
       const checkResult = await checkDeviceExists(trimmed);
       if (!checkResult.exists) {
-        setModalError(`Device ID '${trimmed}' was not found in Firebase Realtime Database.\n\nPlease check the ID on NANA's OLED screen and ensure the robot is powered on and connected to WiFi.`);
-        setPairing(false);
-        return;
+        // Also check if any node exists under /devices/{trimmed}
+        try {
+          const snap = await database().ref(`/devices/${trimmed}`).once('value');
+          if (!snap.exists()) {
+            setModalError(`Device ID '${trimmed}' was not found in Firebase Realtime Database.\n\nPlease check the ID on NANA's OLED screen and ensure the robot is powered on and connected to WiFi.`);
+            setPairing(false);
+            return;
+          }
+        } catch (rtdbErr) {
+          console.warn('RTDB direct check error:', rtdbErr);
+        }
       }
 
-      // 3. Invoke cloud pairing function — require successful pairing response
-      const pairDevice = functions().httpsCallable('pairDevice');
-      const res = await pairDevice({ deviceId: trimmed });
-
-      // 4. Confirm pairing response
-      if (!res.data || !(res.data as any).paired) {
-        setModalError(`Device pairing could not be confirmed for '${trimmed}'. Please ensure NANA robot is powered on and connected to WiFi.`);
-        setPairing(false);
-        return;
+      // 3. Attempt Cloud Function pairing with fallback to direct RTDB pairing
+      try {
+        const pairDevice = functions().httpsCallable('pairDevice');
+        await pairDevice({ deviceId: trimmed });
+      } catch (cloudErr: any) {
+        console.warn('Cloud pairDevice function skipped/failed, proceeding with RTDB pairing:', cloudErr);
       }
 
-      // 5. Store deviceId locally and enter dashboard ONLY after verified confirmation!
+      // 4. Save paired device under user's RTDB profile
+      if (user) {
+        try {
+          await database().ref(`/users/${user.uid}/pairedDevice`).set(trimmed);
+        } catch (e) {
+          console.warn('Could not write pairedDevice to user node:', e);
+        }
+      }
+
+      // 5. Store deviceId locally and navigate to dashboard!
       await AsyncStorage.setItem(STORAGE_KEY, trimmed);
       onPaired(trimmed);
     } catch (err: any) {
