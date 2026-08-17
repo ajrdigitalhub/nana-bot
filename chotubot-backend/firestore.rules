@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Pairing records: {deviceId} -> { ownerId, pairedAt }
+    // All writes happen through the pairDevice/unpairDevice Cloud Functions
+    // (Admin SDK), never directly from a client, so these stay read-only
+    // to the owning user and otherwise closed.
+    match /devicePairings/{deviceId} {
+      allow read: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Per-device factory secrets used only by requestDeviceToken. Never
+    // exposed to any client at all.
+    match /deviceSecrets/{deviceId} {
+      allow read, write: if false;
+    }
+  }
+}
