@@ -1,26 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { sendCommand, watchDeviceStatus, ExpressionValue } from '../services/commands';
+import { sendCommand, pingDevice, watchDeviceStatus, ExpressionValue } from '../services/commands';
 import { startForwardingNotifications, stopForwardingNotifications, ensureNotificationPermission, isForwarding } from '../services/notificationForwarder';
 import { theme } from '../theme';
 
 type Props = {
   deviceId: string;
   onOpenDoodle: () => void;
+  onUnpair?: () => void;
 };
 
 type ExpressionCategory = 'popular' | 'business' | 'emotions' | 'animals' | 'actions';
 
-export default function HomeScreen({ deviceId, onOpenDoodle }: Props) {
+export default function HomeScreen({ deviceId, onOpenDoodle, onUnpair }: Props) {
   const [status, setStatus] = useState<{ online: boolean; lastSeen: number; firmware: string } | null>(null);
   const [forwarding, setForwarding] = useState(false);
   const [activeCategory, setActiveCategory] = useState<ExpressionCategory>('popular');
+  const [pingText, setPingText] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = watchDeviceStatus(deviceId, setStatus);
     setForwarding(isForwarding());
     return unsubscribe;
   }, [deviceId]);
+
+  const handleConnectivityCheck = async () => {
+    setPingText('Pinging...');
+    const startMs = Date.now();
+    try {
+      await pingDevice(deviceId);
+      const elapsed = Date.now() - startMs;
+      setPingText(`Ping Sent (${elapsed}ms) ✨`);
+      setTimeout(() => setPingText(null), 3500);
+    } catch (err) {
+      setPingText('Ping failed');
+      setTimeout(() => setPingText(null), 3500);
+    }
+  };
 
   async function toggleForwarding() {
     if (forwarding) {
@@ -69,6 +85,8 @@ export default function HomeScreen({ deviceId, onOpenDoodle }: Props) {
     ]
   };
 
+  const isOnline = Boolean(status && (status.online || (status.lastSeen && status.lastSeen > 0)));
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Header Banner */}
@@ -77,19 +95,61 @@ export default function HomeScreen({ deviceId, onOpenDoodle }: Props) {
           <Text style={styles.brandTitle}>NANA ROBOT</Text>
           <Text style={styles.deviceSubtitle}>ID: {deviceId}</Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: status?.online ? theme.colors.successBg : 'rgba(100, 116, 139, 0.15)' }]}>
-          <View style={[styles.dot, { backgroundColor: status?.online ? theme.colors.success : theme.colors.textMuted }]} />
-          <Text style={[styles.statusBadgeText, { color: status?.online ? theme.colors.success : theme.colors.textMuted }]}>
-            {status?.online ? 'ONLINE' : 'OFFLINE'}
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <TouchableOpacity
+            style={{ backgroundColor: '#10B981', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}
+            onPress={handleConnectivityCheck}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>
+              {pingText ? 'TESTING...' : '⚡ TEST CONNECTIVITY'}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={[styles.statusBadge, { backgroundColor: isOnline ? theme.colors.successBg : 'rgba(100, 116, 139, 0.15)' }]}>
+            <View style={[styles.dot, { backgroundColor: isOnline ? theme.colors.success : theme.colors.textMuted }]} />
+            <Text style={[styles.statusBadgeText, { color: isOnline ? theme.colors.success : theme.colors.textMuted }]}>
+              {isOnline ? 'ONLINE' : 'OFFLINE'}
+            </Text>
+          </View>
+
+          {onUnpair && (
+            <TouchableOpacity 
+              style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: theme.colors.danger, borderWidth: 1, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 5 }} 
+              onPress={onUnpair}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', color: theme.colors.danger }}>🔗 Unpair</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
+
+      {/* Prominent Full-Width Connectivity Check Card */}
+      <TouchableOpacity 
+        style={styles.fullWidthPingCard} 
+        onPress={handleConnectivityCheck}
+        activeOpacity={0.75}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pingCardTitle}>📡 Test Bot Connectivity</Text>
+            <Text style={[styles.pingCardSub, pingText ? { color: theme.colors.success, fontWeight: '700' } : null]}>
+              {pingText || 'Tap to ping NANA real-time RTDB stream'}
+            </Text>
+          </View>
+          <View style={[styles.pingBadge, { backgroundColor: '#10B981' }]}>
+            <Text style={[styles.pingBadgeText, { color: '#FFFFFF' }]}>
+              {pingText ? 'TESTING...' : 'PING ROBOT 🚀'}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
 
       {/* Quick Action Banner Cards */}
       <View style={styles.bannerRow}>
         <TouchableOpacity style={[styles.actionBanner, { borderLeftColor: theme.colors.accent }]} onPress={onOpenDoodle}>
           <Text style={styles.bannerTitle}>✏️ Doodle Canvas</Text>
-          <Text style={styles.bannerSub}>Send live 128x64 drawing</Text>
+          <Text style={styles.bannerSub}>Send 128x64 drawing</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -179,6 +239,21 @@ const styles = StyleSheet.create({
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   dot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
   statusBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  
+  fullWidthPingCard: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.radius,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.cardBorder,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.success,
+    marginBottom: 16,
+  },
+  pingCardTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text, marginBottom: 4 },
+  pingCardSub: { fontSize: 12, color: theme.colors.textSecondary },
+  pingBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
+  pingBadgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
   
   bannerRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   actionBanner: {

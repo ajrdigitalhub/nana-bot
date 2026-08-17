@@ -1,0 +1,117 @@
+/*
+ * settings.h — user-adjustable device settings, persisted in flash (NVS)
+ * so they survive power loss / reboots. Adjusted on-device via the touch
+ * sensor's long-press settings menu (see touch.h + the STATE_SETTINGS
+ * handling in chotubot.ino) — no app or backend involvement needed for this.
+ */
+#ifndef CHOTUBOT_SETTINGS_H
+#define CHOTUBOT_SETTINGS_H
+
+#include <Preferences.h>
+#include "config.h"
+
+enum TouchSingleTapAction {
+  TAP_ACTION_SHOW_TIME = 0,
+  TAP_ACTION_PLAY_DINO = 1,
+  TAP_ACTION_DISABLED  = 2,
+};
+
+enum SoundMode {
+  SOUND_NORMAL = 0,
+  SOUND_MUTE   = 1,
+  SOUND_QUIET  = 2,
+};
+
+struct ChotubotSettings {
+  int idleTimeoutMinutes = IDLE_TIMEOUT_MINUTES_DEFAULT; // cycles: 1, 5, 10, 15
+  bool use24HourFormat = true;
+  TouchSingleTapAction singleTapAction = TAP_ACTION_SHOW_TIME;
+  SoundMode soundMode = SOUND_NORMAL;
+  int dinoHighScore = 0;
+  int waterReminderMinutes = 0; // 0 = OFF, 30, 45, 60, 90, 120
+  int mealReminderHours = 0;    // 0 = OFF, 2, 3, 4, 5
+};
+
+static ChotubotSettings _settings;
+static Preferences _prefs;
+
+inline void settings_load() {
+  _prefs.begin("chotubot", false);
+  _settings.idleTimeoutMinutes = _prefs.getInt("idleMin", IDLE_TIMEOUT_MINUTES_DEFAULT);
+  _settings.use24HourFormat = _prefs.getBool("use24h", true);
+  _settings.singleTapAction = (TouchSingleTapAction)_prefs.getInt("tapAction", TAP_ACTION_SHOW_TIME);
+  _settings.soundMode = (SoundMode)_prefs.getInt("sndMode", SOUND_NORMAL);
+  _settings.dinoHighScore = _prefs.getInt("dinoHi", 0);
+  _settings.waterReminderMinutes = _prefs.getInt("waterMin", 0);
+  _settings.mealReminderHours = _prefs.getInt("mealHr", 0);
+}
+
+inline void settings_save() {
+  _prefs.putInt("idleMin", _settings.idleTimeoutMinutes);
+  _prefs.putBool("use24h", _settings.use24HourFormat);
+  _prefs.putInt("tapAction", (int)_settings.singleTapAction);
+  _prefs.putInt("sndMode", (int)_settings.soundMode);
+  _prefs.putInt("dinoHi", _settings.dinoHighScore);
+  _prefs.putInt("waterMin", _settings.waterReminderMinutes);
+  _prefs.putInt("mealHr", _settings.mealReminderHours);
+}
+
+inline ChotubotSettings& settings_get() {
+  return _settings;
+}
+
+inline void settings_cycleSoundMode() {
+  if (_settings.soundMode == SOUND_NORMAL) _settings.soundMode = SOUND_MUTE;
+  else if (_settings.soundMode == SOUND_MUTE) _settings.soundMode = SOUND_QUIET;
+  else _settings.soundMode = SOUND_NORMAL;
+}
+
+inline void settings_cycleIdleTimeout() {
+  static const int options[] = { 1, 5, 10, 15 };
+  int idx = 0;
+  for (int i = 0; i < 4; i++) {
+    if (options[i] == _settings.idleTimeoutMinutes) idx = i;
+  }
+  idx = (idx + 1) % 4;
+  _settings.idleTimeoutMinutes = options[idx];
+}
+
+inline void settings_toggleTimeFormat() {
+  _settings.use24HourFormat = !_settings.use24HourFormat;
+}
+
+inline void settings_cycleTapAction() {
+  if (_settings.singleTapAction == TAP_ACTION_SHOW_TIME) {
+    _settings.singleTapAction = TAP_ACTION_PLAY_DINO;
+  } else if (_settings.singleTapAction == TAP_ACTION_PLAY_DINO) {
+    _settings.singleTapAction = TAP_ACTION_DISABLED;
+  } else {
+    _settings.singleTapAction = TAP_ACTION_SHOW_TIME;
+  }
+}
+
+inline void settings_cycleWaterReminder() {
+  static const int options[] = { 0, 30, 45, 60, 90, 120 };
+  int idx = 0;
+  for (int i = 0; i < 6; i++) {
+    if (options[i] == _settings.waterReminderMinutes) idx = i;
+  }
+  idx = (idx + 1) % 6;
+  _settings.waterReminderMinutes = options[idx];
+}
+
+inline void settings_cycleMealReminder() {
+  static const int options[] = { 0, 2, 3, 4, 5 };
+  int idx = 0;
+  for (int i = 0; i < 5; i++) {
+    if (options[i] == _settings.mealReminderHours) idx = i;
+  }
+  idx = (idx + 1) % 5;
+  _settings.mealReminderHours = options[idx];
+}
+
+// Number of settings menu items — keep in sync with faces_drawSettingsMenu()
+// and the handleSettingsTouch() switch in chotubot.ino
+#define SETTINGS_ITEM_COUNT 7
+
+#endif

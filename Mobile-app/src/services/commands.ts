@@ -16,16 +16,17 @@ export type ChotubotCommand =
   | { type: 'sleep' }
   | { type: 'wake' }
   | { type: 'doodle'; bitmapBase64: string; w: number; h: number; durationMs?: number }
-  | { type: 'game'; action: 'start' | 'dino' };
+  | { type: 'game'; action: 'start' | 'dino' }
+  | { type: 'system'; action: 'ping' | 'pong' };
 
 export async function sendCommand(deviceId: string, command: ChotubotCommand) {
   const path = `/devices/${deviceId}/commands/current`;
-  // Written as a JSON STRING (not a nested object) — the firmware polls
-  // this path with Firebase.RTDB.getString() rather than a realtime
-  // stream (a stream task was causing crashes on the ESP32-C3), and
-  // getString()/stringData() is the simpler, more reliable API pairing
-  // for that. Keep this in sync with pollForCommands() in chotubot.ino.
-  await database().ref(path).set(JSON.stringify(command));
+  // Send command object directly so Firebase RTDB stores clean JSON object.
+  await database().ref(path).set(command);
+}
+
+export async function pingDevice(deviceId: string) {
+  return sendCommand(deviceId, { type: 'system', action: 'ping' });
 }
 
 export function watchDeviceStatus(
@@ -51,4 +52,22 @@ export function watchGameResult(
     onChange(snapshot.val());
   });
   return () => ref.off('value', listener);
+}
+
+export async function checkDeviceExists(deviceId: string): Promise<{ exists: boolean; online: boolean; firmware?: string }> {
+  try {
+    const snap = await database().ref(`/devices/${deviceId}/status`).once('value');
+    if (!snap.exists()) {
+      return { exists: false, online: false };
+    }
+    const val = snap.val() || {};
+    return {
+      exists: true,
+      online: Boolean(val.online),
+      firmware: val.firmware || '0.1.0',
+    };
+  } catch (err) {
+    console.warn('Error checking device existence in RTDB:', err);
+    return { exists: false, online: false };
+  }
 }

@@ -1,0 +1,10 @@
+{
+  "appId": "com.nana.robot",
+  "appName": "NANA AI Robot",
+  "webDir": ".",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "nana_mobile_controller.html",
+    "cleartext": true
+  }
+}

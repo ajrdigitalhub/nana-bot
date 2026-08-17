@@ -1,0 +1,17 @@
+# Node modules
+node_modules/
+
+# Android build outputs
+android/app/build/
+android/.gradle/
+android/build/
+
+# Bundle & Cache
+*.jsbundle
+.metro-health-check*
+.npm
+.yarn
+
+# OS files
+.DS_Store
+Thumbs.db

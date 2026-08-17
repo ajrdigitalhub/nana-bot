@@ -37,15 +37,16 @@ export default function DoodleScreen({ deviceId, onDone }: Props) {
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt) => {
-        const { locationX, locationY } = evt.nativeEvent;
-        lastPoint.current = { x: locationX, y: locationY };
+      onPanResponderGrant: (evt: any) => {
+        const { locationX, locationY } = evt.nativeEvent || {};
+        lastPoint.current = { x: locationX || 0, y: locationY || 0 };
       },
-      onPanResponderMove: (evt) => {
+      onPanResponderMove: (evt: any) => {
         const ctx = ctxRef.current;
         const prev = lastPoint.current;
         if (!ctx || !prev) return;
-        const { locationX, locationY } = evt.nativeEvent;
+        const { locationX, locationY } = evt.nativeEvent || {};
+        if (locationX === undefined || locationY === undefined) return;
         ctx.beginPath();
         ctx.moveTo(prev.x, prev.y);
         ctx.lineTo(locationX, locationY);

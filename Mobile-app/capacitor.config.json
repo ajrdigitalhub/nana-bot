@@ -1,0 +1,6 @@
+{
+  "appId": "com.nana.robot",
+  "appName": "NANA AI Robot",
+  "webDir": "src",
+  "bundledWebRuntime": false
+}

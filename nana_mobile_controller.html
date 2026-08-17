@@ -400,6 +400,15 @@
       </div>
     </div>
 
+    <!-- SMART LIFESTYLE & HEALTH REMINDERS -->
+    <div class="section">
+      <div class="section-title">SMART LIFESTYLE & HEALTH REMINDERS</div>
+      <div class="btn-row">
+        <button class="btn-full" style="border-color: var(--accent); background: var(--accent-bg); color: var(--accent);" onclick="sendReminder('water')">💧 Drink Water Alert</button>
+        <button class="btn-full" style="border-color: var(--amber); background: rgba(245, 158, 11, 0.14); color: var(--amber);" onclick="sendReminder('food')">🍲 Meal Time Alert</button>
+      </div>
+    </div>
+
     <!-- GPS HUD NAVIGATION ARROWS -->
     <div class="section">
       <div class="section-title">GPS HUD NAVIGATION CONTROLS</div>
@@ -542,6 +551,10 @@
 
     function sendWakeCommand() {
       sendCommand({ type: 'wake' });
+    }
+
+    function sendReminder(val) {
+      sendCommand({ type: 'reminder', value: val });
     }
 
     function sendNav(dir) {

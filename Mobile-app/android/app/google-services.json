@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "399474157140",
+    "firebase_url": "https://nana-bot-backend-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "nana-bot-backend",
+    "storage_bucket": "nana-bot-backend.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:399474157140:android:87f35495c59801777d6fc1",
+        "android_client_info": {
+          "package_name": "com.ajrgroup.nanabot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBd-QDd1fBh992ywk84_GoPZrPUbIw1YTg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

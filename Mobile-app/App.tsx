@@ -3,12 +3,13 @@ import { SafeAreaView, ActivityIndicator } from 'react-native';
 import auth from '@react-native-firebase/auth';
 
 import LoginScreen from './src/screens/LoginScreen';
-import PairingScreen, { getSavedDeviceId } from './src/screens/PairingScreen';
+import PairingScreen, { getSavedDeviceId, clearSavedDeviceId } from './src/screens/PairingScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import NavigateScreen from './src/screens/NavigateScreen';
 import GamesScreen from './src/screens/GamesScreen';
 import DoodleScreen from './src/screens/DoodleScreen';
 import BottomTabBar, { Tab } from './src/components/BottomTabBar';
+import { checkDeviceExists } from './src/services/commands';
 import { theme } from './src/theme';
 
 type Screen = 'loading' | 'login' | 'pairing' | 'paired';
@@ -27,8 +28,16 @@ export default function App() {
       }
       const saved = await getSavedDeviceId();
       if (saved) {
-        setDeviceId(saved);
-        setScreen('paired');
+        // Live startup verification check: Ensure device exists & is online in Firebase
+        const status = await checkDeviceExists(saved);
+        if (status.exists && status.online) {
+          setDeviceId(saved);
+          setScreen('paired');
+        } else {
+          // Device is offline or un-registered — clear stored ID and force pairing screen
+          await clearSavedDeviceId();
+          setScreen('pairing');
+        }
       } else {
         setScreen('pairing');
       }
@@ -78,7 +87,17 @@ export default function App() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
-      {activeTab === 'home' && <HomeScreen deviceId={deviceId} onOpenDoodle={() => setDoodleOpen(true)} />}
+      {activeTab === 'home' && (
+        <HomeScreen 
+          deviceId={deviceId} 
+          onOpenDoodle={() => setDoodleOpen(true)} 
+          onUnpair={async () => {
+            await clearSavedDeviceId();
+            setDeviceId(null);
+            setScreen('pairing');
+          }}
+        />
+      )}
       {activeTab === 'navigate' && <NavigateScreen deviceId={deviceId} />}
       {activeTab === 'games' && <GamesScreen deviceId={deviceId} />}
       <BottomTabBar active={activeTab} onChange={setActiveTab} />

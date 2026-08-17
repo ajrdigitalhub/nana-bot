@@ -1,3 +1,7 @@
+# Node modules
+node_modules/
+Mobile-app/node_modules/
+
 # Build artifacts
 build/
 *.bin
