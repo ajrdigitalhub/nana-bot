@@ -1545,4 +1545,88 @@ void faces_drawCustomDoodle() {
   _disp->display();
 }
 
+// ---------------------------------------------------------------------------
+// Animated Chat Message Bubble Rendering
+// ---------------------------------------------------------------------------
+void faces_drawAnimatedChatBubble(const String &messageText, float animProgress) {
+  if (!_disp) return;
+  _disp->clearDisplay();
+
+  // Clamp animation progress (0.0 to 1.0)
+  float p = animProgress < 0.0f ? 0.0f : (animProgress > 1.0f ? 1.0f : animProgress);
+  
+  // Full target box geometry
+  const int maxW = 120;
+  const int maxH = 50;
+  const int targetX = (SCREEN_WIDTH - maxW) / 2; // 4
+  const int targetY = 4;
+
+  // Scale box according to easing/animProgress
+  int currentW = (int)(maxW * p);
+  int currentH = (int)(maxH * p);
+  if (currentW < 12) currentW = 12;
+  if (currentH < 12) currentH = 12;
+
+  int currentX = targetX + (maxW - currentW) / 2;
+  int currentY = targetY + (maxH - currentH) / 2;
+
+  // 1. Draw rounded rectangle chat bubble
+  _disp->drawRoundRect(currentX, currentY, currentW, currentH, 5, SH110X_WHITE);
+
+  // 2. Draw speech bubble tail pointing down-left
+  if (p > 0.4f) {
+    int tailX = currentX + 14;
+    int tailY = currentY + currentH;
+    if (tailY < SCREEN_HEIGHT - 6) {
+      _disp->fillTriangle(tailX, tailY - 1, tailX + 8, tailY - 1, tailX - 4, tailY + 5, SH110X_WHITE);
+    }
+  }
+
+  // 3. Render content inside bubble when popped in (p >= 0.7f)
+  if (p >= 0.7f) {
+    // Header tag
+    _disp->setTextSize(1);
+    _disp->setTextColor(SH110X_WHITE);
+    _disp->setCursor(currentX + 6, currentY + 4);
+    _disp->print("💬 CHATBOT MSG");
+
+    _disp->drawFastHLine(currentX + 4, currentY + 13, currentW - 8, SH110X_WHITE);
+
+    // Word Wrap Message Text (Max 18 chars/line, up to 3 lines)
+    int cursorX = currentX + 6;
+    int cursorY = currentY + 16;
+    int charsPerLine = (currentW - 12) / 6;
+    if (charsPerLine < 6) charsPerLine = 6;
+
+    String text = messageText;
+    int len = text.length();
+    int startIdx = 0;
+    int lineCount = 0;
+
+    while (startIdx < len && lineCount < 3) {
+      int endIdx = startIdx + charsPerLine;
+      if (endIdx > len) endIdx = len;
+      else {
+        // Break on space if possible
+        int spaceIdx = text.lastIndexOf(' ', endIdx);
+        if (spaceIdx > startIdx && spaceIdx < endIdx) {
+          endIdx = spaceIdx;
+        }
+      }
+
+      String line = text.substring(startIdx, endIdx);
+      line.trim();
+
+      _disp->setCursor(cursorX, cursorY + (lineCount * 10));
+      _disp->print(line);
+
+      startIdx = endIdx;
+      if (startIdx < len && text.charAt(startIdx) == ' ') startIdx++;
+      lineCount++;
+    }
+  }
+
+  _disp->display();
+}
+
 #endif

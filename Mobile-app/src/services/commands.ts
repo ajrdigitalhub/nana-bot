@@ -29,12 +29,24 @@ export type ChotubotCommand =
   | { type: 'doodle'; bitmapBase64: string; w: number; h: number; durationMs?: number }
   | { type: 'game'; action: 'start' | 'dino' }
   | { type: 'system'; action: 'ping' | 'pong' }
+  | { type: 'chat_message'; text: string; id: string }
   | ({ type: 'settings' } & Partial<DeviceSettings>);
 
 export async function sendCommand(deviceId: string, command: ChotubotCommand) {
   const path = `/devices/${deviceId}/commands/current`;
   // Send command object directly so Firebase RTDB stores clean JSON object.
   await database().ref(path).set(command);
+}
+
+export function watchMsgStatus(
+  deviceId: string,
+  onChange: (status: { id: string; status: string; timestamp: number } | null) => void
+) {
+  const ref = database().ref(`/devices/${deviceId}/msgStatus`);
+  const listener = ref.on('value', (snapshot) => {
+    onChange(snapshot.val());
+  });
+  return () => ref.off('value', listener);
 }
 
 export async function updateDeviceSettings(deviceId: string, settings: Partial<DeviceSettings>) {

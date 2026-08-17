@@ -9,6 +9,7 @@ import NavigateScreen from './src/screens/NavigateScreen';
 import GamesScreen from './src/screens/GamesScreen';
 import DoodleScreen from './src/screens/DoodleScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import ChatbotScreen from './src/screens/ChatbotScreen';
 import BottomTabBar, { Tab } from './src/components/BottomTabBar';
 import { checkDeviceExists } from './src/services/commands';
 import { theme } from './src/theme';
@@ -101,6 +102,7 @@ export default function App() {
           onUnpair={handleUnpair}
         />
       )}
+      {activeTab === 'chatbot' && <ChatbotScreen deviceId={deviceId} />}
       {activeTab === 'navigate' && <NavigateScreen deviceId={deviceId} />}
       {activeTab === 'games' && <GamesScreen deviceId={deviceId} />}
       {activeTab === 'settings' && (

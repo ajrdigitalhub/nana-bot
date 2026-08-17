@@ -84,7 +84,8 @@ enum DeviceState {
   STATE_GAME_RESULT,  // shows the reaction time (or "too soon")
   STATE_DINO_GAME,    // Chrome Dino-style Elephant runner game
   STATE_WATER_REMINDER, // Animated water tumbler liquid fill & drink alert
-  STATE_FOOD_REMINDER   // Steaming meal plate & meal time alert
+  STATE_FOOD_REMINDER,  // Steaming meal plate & meal time alert
+  STATE_CHAT_MESSAGE   // Animated chat bubble message display
 };
 
 DeviceState currentState = STATE_BOOT;
@@ -94,6 +95,9 @@ unsigned long lastStatusPushAt = 0;
 
 unsigned long temporaryStateDurationMs = 0;
 String pendingNotificationText = "";
+String pendingChatMessage = "";
+String pendingChatMsgId = "";
+unsigned long chatMessageAnimStart = 0;
 String deviceId = "";
 
 EyeMood activeMood = MOOD_DEFAULT; // which mood STATE_EXPRESSION currently shows
@@ -727,9 +731,51 @@ void handleIncomingMessage(const String &msg) {
     Serial.println(" -> Hardware flash preferences updated & saved!");
     enterExpression(MOOD_CUTE_SMILE, 2500);
 
+  } else if (type == "chat_message") {
+    String text = doc["text"] | "";
+    String msgId = doc["id"] | "";
+    if (text.length() > 60) {
+      text = text.substring(0, 60); // Safety limit for 128x64 display memory
+    }
+    Serial.print(" -> Chat Message Action: Text='");
+    Serial.print(text);
+    Serial.print("', ID='");
+    Serial.print(msgId);
+    Serial.println("'");
+
+    pendingChatMessage = text;
+    pendingChatMsgId = msgId;
+    chatMessageAnimStart = millis();
+    transitionTo(STATE_CHAT_MESSAGE, 6500);
+
+    pushMsgStatus(msgId, "delivered");
+
   } else {
     Serial.print(" -> Unknown message type: ");
     Serial.println(type);
+  }
+}
+
+void pushMsgStatus(const String &msgId, const String &status) {
+  if (WiFi.status() != WL_CONNECTED || msgId.length() == 0) return;
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  String url = String(FIREBASE_RTDB_URL) + "/devices/" + deviceId + "/msgStatus.json";
+  if (http.begin(client, url)) {
+    http.addHeader("Content-Type", "application/json");
+    StaticJsonDocument<128> doc;
+    doc["id"] = msgId;
+    doc["status"] = status;
+    doc["timestamp"] = millis();
+    String body;
+    serializeJson(doc, body);
+    http.PUT(body);
+    http.end();
+    Serial.print(">>> Message Status Pushed to RTDB: ID=");
+    Serial.print(msgId);
+    Serial.print(", Status=");
+    Serial.println(status);
   }
 }
 
@@ -1112,6 +1158,17 @@ void renderCurrentState() {
     case STATE_SETTINGS:        faces_drawSettingsMenu(settingsMenuIndex, isSubOptionOpen); break;
     case STATE_WATER_REMINDER:  faces_drawWaterReminder(); break;
     case STATE_FOOD_REMINDER:   faces_drawFoodReminder(); break;
+    case STATE_CHAT_MESSAGE: {
+      unsigned long elapsed = millis() - chatMessageAnimStart;
+      float progress = 1.0f;
+      if (elapsed < 400) {
+        progress = (float)elapsed / 400.0f;
+      } else if (elapsed > 5800) {
+        progress = (float)(6500 - elapsed) / 700.0f;
+      }
+      faces_drawAnimatedChatBubble(pendingChatMessage, progress);
+      break;
+    }
     default: break;
   }
 }
