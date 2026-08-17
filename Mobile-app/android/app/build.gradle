@@ -1,10 +1,9 @@
 apply plugin: "com.android.application"
 apply plugin: "com.facebook.react"
 
-project.ext.react = [
-    bundleInDebug: true,
-    entryFile: "index.js"
-]
+react {
+    autolinkLibrariesWithApp()
+}
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -29,9 +28,9 @@ android {
         }
     }
 
-    packagingOptions {
+    packaging {
         jniLibs {
-            useLegacyPackaging = true
+            useLegacyPackaging = false
         }
     }
 
@@ -63,12 +62,6 @@ dependencies {
     implementation 'com.google.firebase:firebase-database'
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.firebase:firebase-functions'
-    implementation project(':react-native-async-storage_async-storage')
-    implementation project(':react-native-firebase_app')
-    implementation project(':react-native-firebase_auth')
-    implementation project(':react-native-firebase_database')
-    implementation project(':react-native-firebase_functions')
-    implementation project(':react-native-svg')
 }
 
 apply plugin: 'com.google.gms.google-services'

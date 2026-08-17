@@ -117,9 +117,16 @@ export default function LoginScreen({ onSignedIn }: Props) {
       await auth().signInAnonymously();
       onSignedIn();
     } catch (err: any) {
-      // If even Firebase anonymous sign-in fails or is disabled in console, allow guest proceed
-      console.warn('Anonymous sign-in warning:', err);
-      onSignedIn();
+      const msg = err?.message ?? String(err);
+      const codeStr = err?.code ?? '';
+
+      if (codeStr === 'auth/configuration-not-found' || msg.includes('CONFIGURATION_NOT_FOUND')) {
+        setIsConfigError(true);
+        setErrorMessage('Anonymous Authentication is not enabled in your Firebase Console.');
+      } else {
+        console.warn('Anonymous sign-in warning:', err);
+        setErrorMessage(msg);
+      }
     } finally {
       setSending(false);
     }

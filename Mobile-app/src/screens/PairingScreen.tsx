@@ -27,31 +27,28 @@ export default function PairingScreen({ onPaired }: Props) {
     setPairing(true);
     setModalError(null);
     try {
-      // 1. Ensure Firebase authentication exists
+      // 1. Ensure Firebase authentication exists (non-blocking)
       let user = auth().currentUser;
       if (!user) {
         try {
           const authRes = await auth().signInAnonymously();
           user = authRes.user;
-        } catch (e) {
-          console.warn('Anonymous auth prior to pairing skipped/failed:', e);
+        } catch (e: any) {
+          console.warn('Anonymous auth prior to pairing skipped/failed (non-fatal):', e);
         }
       }
 
-      // 2. Real Check in Firebase Realtime Database: Check if device exists
-      const checkResult = await checkDeviceExists(trimmed);
-      if (!checkResult.exists) {
-        // Also check if any node exists under /devices/{trimmed}
-        try {
+      // 2. Real Check in Firebase Realtime Database (non-blocking)
+      try {
+        const checkResult = await checkDeviceExists(trimmed);
+        if (!checkResult.exists) {
           const snap = await database().ref(`/devices/${trimmed}`).once('value');
           if (!snap.exists()) {
-            setModalError(`Device ID '${trimmed}' was not found in Firebase Realtime Database.\n\nPlease check the ID on NANA's OLED screen and ensure the robot is powered on and connected to WiFi.`);
-            setPairing(false);
-            return;
+            console.warn(`Device ID '${trimmed}' node not found on RTDB yet; proceeding with pairing.`);
           }
-        } catch (rtdbErr) {
-          console.warn('RTDB direct check error:', rtdbErr);
         }
+      } catch (rtdbErr) {
+        console.warn('RTDB direct check error (non-fatal):', rtdbErr);
       }
 
       // 3. Attempt Cloud Function pairing with fallback to direct RTDB pairing
