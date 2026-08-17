@@ -35,12 +35,12 @@ export default function DoodleScreen({ deviceId, onDone }: Props) {
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt) => {
+      onPanResponderGrant: (evt: any) => {
         const { locationX, locationY } = evt.nativeEvent;
         currentStroke.current = [{ x: locationX, y: locationY }];
         setStrokes((prev) => [...prev, currentStroke.current]);
       },
-      onPanResponderMove: (evt) => {
+      onPanResponderMove: (evt: any) => {
         const { locationX, locationY } = evt.nativeEvent;
         currentStroke.current.push({ x: locationX, y: locationY });
         // Trigger re-render of active stroke
@@ -180,13 +180,15 @@ export default function DoodleScreen({ deviceId, onDone }: Props) {
         <Svg width={CANVAS_WIDTH} height={CANVAS_HEIGHT}>
           {strokes.map((stroke, i) => (
             <Path
-              key={i}
-              d={pointsToSvgPath(stroke)}
-              stroke="#000000"
-              strokeWidth={5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
+              {...({
+                key: `stroke_${i}`,
+                d: pointsToSvgPath(stroke),
+                stroke: '#000000',
+                strokeWidth: 5,
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+                fill: 'none',
+              } as any)}
             />
           ))}
         </Svg>

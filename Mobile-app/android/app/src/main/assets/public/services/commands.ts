@@ -30,6 +30,7 @@ export type ChotubotCommand =
   | { type: 'game'; action: 'start' | 'dino' }
   | { type: 'system'; action: 'ping' | 'pong' }
   | { type: 'chat_message'; text: string; id: string }
+  | { type: 'reminder'; value: 'water' | 'food' }
   | ({ type: 'settings' } & Partial<DeviceSettings>);
 
 export async function sendCommand(deviceId: string, command: ChotubotCommand) {
