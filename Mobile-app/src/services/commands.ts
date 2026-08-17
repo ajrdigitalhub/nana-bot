@@ -9,6 +9,17 @@ export type ExpressionValue =
   | 'cute' | 'dog' | 'cat' | 'wink' | 'love' | 'dizzy'
   | 'excited' | 'shocked' | 'confused' | 'wave' | 'idle';
 
+export interface DeviceSettings {
+  idleMin: number;        // 1, 5, 10, 15
+  use24h: boolean;        // true / false
+  tapAction: number;      // 0=Clock, 1=Dino, 2=Disabled
+  sndMode: number;        // 0=Normal, 1=Mute, 2=Quiet
+  waterMin: number;       // 0, 30, 45, 60, 90, 120
+  mealHr: number;         // 0, 2, 3, 4, 5
+  dinoHi?: number;        // High score
+  resetHigh?: boolean;
+}
+
 export type ChotubotCommand =
   | { type: 'expression'; value: ExpressionValue; durationMs?: number }
   | { type: 'notification'; title: string; body: string; durationMs?: number }
@@ -17,12 +28,31 @@ export type ChotubotCommand =
   | { type: 'wake' }
   | { type: 'doodle'; bitmapBase64: string; w: number; h: number; durationMs?: number }
   | { type: 'game'; action: 'start' | 'dino' }
-  | { type: 'system'; action: 'ping' | 'pong' };
+  | { type: 'system'; action: 'ping' | 'pong' }
+  | ({ type: 'settings' } & Partial<DeviceSettings>);
 
 export async function sendCommand(deviceId: string, command: ChotubotCommand) {
   const path = `/devices/${deviceId}/commands/current`;
   // Send command object directly so Firebase RTDB stores clean JSON object.
   await database().ref(path).set(command);
+}
+
+export async function updateDeviceSettings(deviceId: string, settings: Partial<DeviceSettings>) {
+  // 1. Send live realtime settings command to device
+  await sendCommand(deviceId, { type: 'settings', ...settings });
+  // 2. Persist device settings state under /devices/{deviceId}/settings
+  await database().ref(`/devices/${deviceId}/settings`).update(settings);
+}
+
+export function watchDeviceSettings(
+  deviceId: string,
+  onChange: (settings: DeviceSettings | null) => void
+) {
+  const ref = database().ref(`/devices/${deviceId}/settings`);
+  const listener = ref.on('value', (snapshot) => {
+    onChange(snapshot.val());
+  });
+  return () => ref.off('value', listener);
 }
 
 export async function pingDevice(deviceId: string) {

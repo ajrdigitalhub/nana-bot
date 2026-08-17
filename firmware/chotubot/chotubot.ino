@@ -713,6 +713,20 @@ void handleIncomingMessage(const String &msg) {
       transitionTo(STATE_FOOD_REMINDER, 8000);
     }
 
+  } else if (type == "settings") {
+    Serial.println(" -> Remote Settings Update received from Mobile App!");
+    ChotubotSettings &st = settings_get();
+    if (doc.containsKey("idleMin")) st.idleTimeoutMinutes = doc["idleMin"].as<int>();
+    if (doc.containsKey("use24h")) st.use24HourFormat = doc["use24h"].as<bool>();
+    if (doc.containsKey("tapAction")) st.singleTapAction = (TouchSingleTapAction)doc["tapAction"].as<int>();
+    if (doc.containsKey("sndMode")) st.soundMode = (SoundMode)doc["sndMode"].as<int>();
+    if (doc.containsKey("waterMin")) st.waterReminderMinutes = doc["waterMin"].as<int>();
+    if (doc.containsKey("mealHr")) st.mealReminderHours = doc["mealHr"].as<int>();
+    if (doc.containsKey("resetHigh") && doc["resetHigh"].as<bool>() == true) st.dinoHighScore = 0;
+    settings_save();
+    Serial.println(" -> Hardware flash preferences updated & saved!");
+    enterExpression(MOOD_CUTE_SMILE, 2500);
+
   } else {
     Serial.print(" -> Unknown message type: ");
     Serial.println(type);

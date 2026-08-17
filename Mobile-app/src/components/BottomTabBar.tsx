@@ -2,7 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { theme } from '../theme';
 
-export type Tab = 'home' | 'navigate' | 'games';
+export type Tab = 'home' | 'navigate' | 'games' | 'settings';
 
 type Props = {
   active: Tab;
@@ -13,6 +13,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'home', label: 'Home', icon: '🏠' },
   { key: 'navigate', label: 'Navigate', icon: '🗺️' },
   { key: 'games', label: 'Arcade', icon: '🎮' },
+  { key: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 
 export default function BottomTabBar({ active, onChange }: Props) {

@@ -8,6 +8,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import NavigateScreen from './src/screens/NavigateScreen';
 import GamesScreen from './src/screens/GamesScreen';
 import DoodleScreen from './src/screens/DoodleScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 import BottomTabBar, { Tab } from './src/components/BottomTabBar';
 import { checkDeviceExists } from './src/services/commands';
 import { theme } from './src/theme';
@@ -19,6 +20,12 @@ export default function App() {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [doodleOpen, setDoodleOpen] = useState(false);
+
+  const handleUnpair = async () => {
+    await clearSavedDeviceId();
+    setDeviceId(null);
+    setScreen('pairing');
+  };
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(async (user) => {
@@ -91,15 +98,14 @@ export default function App() {
         <HomeScreen 
           deviceId={deviceId} 
           onOpenDoodle={() => setDoodleOpen(true)} 
-          onUnpair={async () => {
-            await clearSavedDeviceId();
-            setDeviceId(null);
-            setScreen('pairing');
-          }}
+          onUnpair={handleUnpair}
         />
       )}
       {activeTab === 'navigate' && <NavigateScreen deviceId={deviceId} />}
       {activeTab === 'games' && <GamesScreen deviceId={deviceId} />}
+      {activeTab === 'settings' && (
+        <SettingsScreen deviceId={deviceId} onUnpair={handleUnpair} />
+      )}
       <BottomTabBar active={activeTab} onChange={setActiveTab} />
     </SafeAreaView>
   );
