@@ -30,6 +30,7 @@ struct ChotubotSettings {
   int dinoHighScore = 0;
   int waterReminderMinutes = 0; // 0 = OFF, 30, 45, 60, 90, 120
   int mealReminderHours = 0;    // 0 = OFF, 2, 3, 4, 5
+  char userName[20] = "JK";     // Configurable User Name (default "JK")
 };
 
 static ChotubotSettings _settings;
@@ -44,6 +45,8 @@ inline void settings_load() {
   _settings.dinoHighScore = _prefs.getInt("dinoHi", 0);
   _settings.waterReminderMinutes = _prefs.getInt("waterMin", 0);
   _settings.mealReminderHours = _prefs.getInt("mealHr", 0);
+  String nameStr = _prefs.getString("userName", "JK");
+  snprintf(_settings.userName, sizeof(_settings.userName), "%s", nameStr.c_str());
 }
 
 inline void settings_save() {
@@ -54,6 +57,7 @@ inline void settings_save() {
   _prefs.putInt("dinoHi", _settings.dinoHighScore);
   _prefs.putInt("waterMin", _settings.waterReminderMinutes);
   _prefs.putInt("mealHr", _settings.mealReminderHours);
+  _prefs.putString("userName", _settings.userName);
 }
 
 inline ChotubotSettings& settings_get() {

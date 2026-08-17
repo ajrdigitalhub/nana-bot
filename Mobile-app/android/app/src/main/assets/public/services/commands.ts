@@ -16,6 +16,7 @@ export interface DeviceSettings {
   sndMode: number;        // 0=Normal, 1=Mute, 2=Quiet
   waterMin: number;       // 0, 30, 45, 60, 90, 120
   mealHr: number;         // 0, 2, 3, 4, 5
+  userName?: string;      // Dynamic startup greeting name (default "JK")
   dinoHi?: number;        // High score
   resetHigh?: boolean;
 }
@@ -27,7 +28,7 @@ export type ChotubotCommand =
   | { type: 'sleep' }
   | { type: 'wake' }
   | { type: 'doodle'; bitmapBase64: string; w: number; h: number; durationMs?: number }
-  | { type: 'game'; action: 'start' | 'dino' }
+  | { type: 'game'; action: 'start' | 'dino' | 'jump' | 'quit' }
   | { type: 'system'; action: 'ping' | 'pong' }
   | { type: 'chat_message'; text: string; id: string }
   | { type: 'reminder'; value: 'water' | 'food' }

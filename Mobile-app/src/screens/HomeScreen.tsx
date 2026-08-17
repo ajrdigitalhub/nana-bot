@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, StatusBar } from 'react-native';
 import { sendCommand, pingDevice, watchDeviceStatus, ExpressionValue } from '../services/commands';
 import { startForwardingNotifications, stopForwardingNotifications, ensureNotificationPermission, isForwarding } from '../services/notificationForwarder';
 import { theme } from '../theme';
@@ -11,6 +11,8 @@ type Props = {
 };
 
 type ExpressionCategory = 'popular' | 'business' | 'emotions' | 'animals' | 'actions';
+
+const STATUSBAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 12 : 12;
 
 export default function HomeScreen({ deviceId, onOpenDoodle, onUnpair }: Props) {
   const [status, setStatus] = useState<{ online: boolean; lastSeen: number; firmware: string } | null>(null);
@@ -88,7 +90,7 @@ export default function HomeScreen({ deviceId, onOpenDoodle, onUnpair }: Props) 
   const isOnline = Boolean(status && (status.online || (status.lastSeen && status.lastSeen > 0)));
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={[styles.container, { paddingTop: STATUSBAR_HEIGHT }]}>
       {/* Header Banner */}
       <View style={styles.headerRow}>
         <View>

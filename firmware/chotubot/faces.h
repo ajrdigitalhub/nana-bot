@@ -351,11 +351,74 @@ void _drawMouth(float curvature, int width = 10) {
   }
 }
 
+// 16x16 Pixel-Perfect Symmetrical Heart Eye Bitmap
+static const uint8_t PROGMEM heart_eye_16x16[] = {
+  0x38, 0x1C, //   ###       ###
+  0x7C, 0x3E, //  #####     #####
+  0x7E, 0x7E, // #######   #######
+  0xFF, 0xFF, // ################
+  0xFF, 0xFF, // ################
+  0xFF, 0xFF, // ################
+  0x7F, 0xFE, //  ##############
+  0x7F, 0xFE, //  ##############
+  0x3F, 0xFC, //   ############
+  0x1F, 0xF8, //    ##########
+  0x0F, 0xF0, //     ########
+  0x07, 0xE0, //      ######
+  0x03, 0xC0, //       ####
+  0x01, 0x80, //        ##
+  0x00, 0x00,
+  0x00, 0x00
+};
+
+// 14x14 Pixel-Perfect Symmetrical Heart Eye Bitmap
+static const uint8_t PROGMEM heart_eye_14x14[] = {
+  0x38, 0x1C, //   ###       ###
+  0x7C, 0x3E, //  #####     #####
+  0x7E, 0x7E, // #######   #######
+  0xFF, 0xFF, // ################
+  0xFF, 0xFF, // ################
+  0x7F, 0xFE, //  ##############
+  0x3F, 0xFC, //   ############
+  0x1F, 0xF8, //    ##########
+  0x0F, 0xF0, //     ########
+  0x07, 0xE0, //      ######
+  0x03, 0xC0, //       ####
+  0x01, 0x80, //        ##
+  0x00, 0x00,
+  0x00, 0x00
+};
+
+// 24x24 Waving Hand Animation Frames
+static const uint8_t PROGMEM wave_hand_f0[] = {
+  0x01, 0x8C, 0x00, 0x03, 0xCE, 0x00, 0x07, 0xFF, 0x00, 0x07, 0xFF, 0x00,
+  0x0F, 0xFF, 0x00, 0x1F, 0xFF, 0x80, 0x3F, 0xFF, 0xC0, 0x7F, 0xFF, 0xE0,
+  0x7F, 0xFF, 0xE0, 0xFF, 0xFF, 0xF0, 0xFF, 0xFF, 0xF0, 0x7F, 0xFF, 0xF0,
+  0x3F, 0xFF, 0xE0, 0x1F, 0xFF, 0xC0, 0x0F, 0xFF, 0x80, 0x07, 0xFF, 0x00,
+  0x03, 0xFE, 0x00, 0x01, 0xFC, 0x00, 0x00, 0xF8, 0x00, 0x00, 0xF0, 0x00,
+  0x00, 0xE0, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00
+};
+
+static const uint8_t PROGMEM wave_hand_f1[] = {
+  0x0F, 0x0F, 0x00, 0x1F, 0x1F, 0x80, 0x1F, 0x1F, 0x80, 0x1F, 0x1F, 0x80,
+  0x3F, 0xBF, 0xC0, 0x7F, 0xFF, 0xE0, 0xFF, 0xFF, 0xF0, 0xFF, 0xFF, 0xF0,
+  0xFF, 0xFF, 0xF0, 0xFF, 0xFF, 0xF0, 0x7F, 0xFF, 0xE0, 0x7F, 0xFF, 0xE0,
+  0x3F, 0xFF, 0xC0, 0x3F, 0xFF, 0xC0, 0x1F, 0xFF, 0x80, 0x1F, 0xFF, 0x80,
+  0x0F, 0xFF, 0x00, 0x0F, 0xFF, 0x00, 0x07, 0xFE, 0x00, 0x07, 0xFE, 0x00,
+  0x03, 0xFC, 0x00, 0x03, 0xFC, 0x00, 0x01, 0xF8, 0x00, 0x00, 0x00, 0x00
+};
+
+static const uint8_t PROGMEM wave_hand_f2[] = {
+  0x00, 0x31, 0x80, 0x00, 0x73, 0xC0, 0x00, 0xFF, 0xE0, 0x00, 0xFF, 0xE0,
+  0x00, 0xFF, 0xF0, 0x01, 0xFF, 0xF8, 0x03, 0xFF, 0xFC, 0x07, 0xFF, 0xFE,
+  0x07, 0xFF, 0xFE, 0x0F, 0xFF, 0xFF, 0x0F, 0xFF, 0xFF, 0x0F, 0xFF, 0xFE,
+  0x07, 0xFF, 0xFC, 0x03, 0xFF, 0xF8, 0x01, 0xFF, 0xF0, 0x00, 0xFF, 0xE0,
+  0x00, 0x7F, 0xC0, 0x00, 0x3F, 0x80, 0x00, 0x1F, 0x00, 0x00, 0x0F, 0x00,
+  0x00, 0x07, 0x00, 0x00, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00
+};
+
 static void _drawHeart(int cx, int cy, int size) {
-  int r = size / 2;
-  _disp->fillCircle(cx - r/2, cy - r/2, r, SH110X_WHITE);
-  _disp->fillCircle(cx + r/2, cy - r/2, r, SH110X_WHITE);
-  _disp->fillTriangle(cx - size, cy - r/4, cx + size, cy - r/4, cx, cy + size, SH110X_WHITE);
+  _disp->drawBitmap(cx - 8, cy - 8, heart_eye_16x16, 16, 16, SH110X_WHITE);
 }
 
 void _drawBrandWatermark() {
@@ -524,133 +587,165 @@ static const uint8_t PROGMEM rocket_bitmap[] = {
   0x06, 0x00  //      ##
 };
 
+inline void _getPerimeterPoint(int dist, int &outX, int &outY) {
+  dist = (dist % 384 + 384) % 384;
+  if (dist < 128) {
+    outX = dist;
+    outY = 0;
+  } else if (dist < 192) {
+    outX = 127;
+    outY = dist - 128;
+  } else if (dist < 320) {
+    outX = 127 - (dist - 192);
+    outY = 63;
+  } else {
+    outX = 0;
+    outY = 63 - (dist - 320);
+  }
+}
+
+inline void _drawBorderSnake(unsigned long elapsedMs, int snakeLength = 14) {
+  int headDist = (int)((elapsedMs / 5) % 384);
+  for (int i = 0; i < snakeLength; i++) {
+    int x, y;
+    _getPerimeterPoint(headDist - i, x, y);
+    _disp->drawPixel(x, y, SH110X_WHITE);
+  }
+}
+
+void _drawCursiveNana(float progress) {
+  _disp->setTextSize(2);
+  _disp->setTextColor(SH110X_WHITE);
+
+  int letterCount = (int)(progress * 4.0f + 0.95f);
+  if (letterCount > 4) letterCount = 4;
+
+  const char* fullText = "Nana";
+  char textBuf[5] = "";
+  for (int i = 0; i < letterCount && i < 4; i++) {
+    textBuf[i] = fullText[i];
+  }
+  textBuf[letterCount] = '\0';
+
+  _disp->setCursor(26, 20);
+  _disp->print(textBuf);
+
+  if (progress > 0.6f) {
+    _disp->fillCircle(58, 14, 2, SH110X_WHITE);
+    _disp->drawPixel(58, 11, SH110X_WHITE);
+    _disp->drawPixel(58, 17, SH110X_WHITE);
+    _disp->drawPixel(55, 14, SH110X_WHITE);
+    _disp->drawPixel(61, 14, SH110X_WHITE);
+  }
+}
+
 void faces_playBootIntro() {
-  const unsigned long DURATION = 6400; // 3.2s Page 1 + 3.2s Page 2
+  // Step 1 -> Cursive NANA Logo (0 to 1800ms)
+  // Step 2 & 3 -> Information Slide 1 with Typewriter + 2.0s Hold (1800 to 4200ms)
+  // Step 4 -> Information Slide 2 with Typewriter + 2.0s Hold (4200 to 6600ms)
+  // Step 5 -> Main Firmware Page
+  const unsigned long DURATION = 6600;
   unsigned long start = millis();
 
   while (millis() - start < DURATION) {
     unsigned long elapsed = millis() - start;
     _disp->clearDisplay();
 
-    if (elapsed < 3200) {
-      // ---------------------------------------------------------------------
-      // PAGE 1: Cursive "Nana" Logo + Heart Dot + Heart Flourish + Embedded Bot Eyes
-      // ---------------------------------------------------------------------
-      _disp->setTextSize(2);
+    // Animated snake indicator moving around the border
+    _drawBorderSnake(elapsed, 14);
 
-      // Letter-by-letter reveal logic
-      int letterIndex = (int)(elapsed / 550);
-      if (letterIndex > 4) letterIndex = 4;
+    if (elapsed < 1800) {
+      // STEP 1: Cursive NANA logo progressive drawing reveal
+      float progress = (float)elapsed / 1500.0f;
+      if (progress > 1.0f) progress = 1.0f;
 
-      char textBuf[5] = "";
-      const char* fullText = "Nana";
-      for (int i = 0; i < letterIndex && i < 4; i++) {
-        textBuf[i] = fullText[i];
-      }
-      textBuf[letterIndex] = '\0';
+      _drawCursiveNana(progress);
 
-      // Cursive Text "Nana"
-      _disp->setCursor(14, 24);
-      _disp->print(textBuf);
-
-      // Solid Heart Dot above middle letter 'n' (reveals at stage 3)
-      if (elapsed > 1600) {
-        _drawHeart(46, 16, 3);
+      if (elapsed > 900) {
+        _disp->setTextSize(1);
+        _disp->setCursor(20, 44);
+        const char* tag = "AI COMPANION";
+        int len = strlen(tag);
+        int chars = (int)((elapsed - 900) / 60);
+        if (chars > len) chars = len;
+        char tagBuf[16] = "";
+        strncpy(tagBuf, tag, chars);
+        tagBuf[chars] = '\0';
+        _disp->print(tagBuf);
       }
 
-      // Giant Sweeping Heart Flourish wrapping the right side (reveals at stage 4)
-      if (elapsed > 2000) {
-        _disp->drawCircle(102, 28, 14, SH110X_WHITE);
-        _disp->drawTriangle(88, 36, 116, 36, 102, 54, SH110X_WHITE);
-      }
+    } else if (elapsed < 4200) {
+      // STEP 2 & 3: Information Slide 1 (Typewriter reveal + 2.0s hold)
+      unsigned long s1Elapsed = elapsed - 1800;
 
-      // NANA's Dual Capsule Bot Eyes Embedded INSIDE the Heart Loop! (reveals at stage 5)
-      if (elapsed > 2500) {
-        // Left Capsule Eye
-        _disp->fillRoundRect(96, 24, 4, 7, 2, SH110X_WHITE);
-        // Right Capsule Eye
-        _disp->fillRoundRect(104, 24, 4, 7, 2, SH110X_WHITE);
-        // Micro Smile Curve
-        _disp->drawLine(98, 33, 104, 33, SH110X_WHITE);
-      }
-
-    } else {
-      // ---------------------------------------------------------------------
-      // PAGE 2: "Powered By AJRGroups" in Prominent Decorative Border & Glitter
-      // ---------------------------------------------------------------------
-      unsigned long p2Elapsed = elapsed - 3200;
-
-      // Prominent Decorative Double Border Badge Frame
-      _disp->drawRoundRect(4, 12, SCREEN_WIDTH - 8, 40, 5, SH110X_WHITE);
-      _disp->drawRoundRect(6, 14, SCREEN_WIDTH - 12, 36, 4, SH110X_WHITE);
-
-      // Dynamic Sparkling / Glitter Animation Particles Around Border
-      int glitterFrame = (p2Elapsed / 120) % 4;
-      if (glitterFrame == 0 || glitterFrame == 2) {
-        _disp->drawPixel(2, 10, SH110X_WHITE); _disp->drawPixel(SCREEN_WIDTH - 3, 10, SH110X_WHITE);
-        _disp->drawPixel(2, 53, SH110X_WHITE); _disp->drawPixel(SCREEN_WIDTH - 3, 53, SH110X_WHITE);
-        _disp->drawLine(12, 8, 16, 8, SH110X_WHITE); _disp->drawLine(14, 6, 14, 10, SH110X_WHITE);
-        _disp->drawLine(SCREEN_WIDTH - 16, 55, SCREEN_WIDTH - 12, 55, SH110X_WHITE);
-      } else {
-        _disp->drawPixel(3, 11, SH110X_WHITE); _disp->drawPixel(SCREEN_WIDTH - 4, 11, SH110X_WHITE);
-        _disp->drawPixel(3, 52, SH110X_WHITE); _disp->drawPixel(SCREEN_WIDTH - 4, 52, SH110X_WHITE);
-        _disp->drawLine(SCREEN_WIDTH - 16, 8, SCREEN_WIDTH - 12, 8, SH110X_WHITE);
-        _disp->drawLine(12, 55, 16, 55, SH110X_WHITE);
-      }
-
-      // Title & Subtitle Typewriter Reveal Effect inside Decorative Border
       _disp->setTextSize(1);
       _disp->setTextColor(SH110X_WHITE);
 
-      // Line 1 Typewriter Reveal ("POWERED BY")
+      _disp->setCursor(14, 8);
+      _disp->print("NANA ROBOT V2.0");
+      _disp->drawFastHLine(12, 18, SCREEN_WIDTH - 24, SH110X_WHITE);
+
+      const char* l1 = "Your Smart Desktop";
+      int len1 = strlen(l1);
+      int chars1 = (int)(s1Elapsed / 35);
+      if (chars1 > len1) chars1 = len1;
+      char buf1[24] = ""; strncpy(buf1, l1, chars1); buf1[chars1] = '\0';
+
+      _disp->setCursor(10, 24);
+      _disp->print(buf1);
+
+      if (s1Elapsed > 350) {
+        unsigned long s1b = s1Elapsed - 350;
+        const char* l2 = "AI Companion!";
+        int len2 = strlen(l2);
+        int chars2 = (int)(s1b / 35);
+        if (chars2 > len2) chars2 = len2;
+        char buf2[20] = ""; strncpy(buf2, l2, chars2); buf2[chars2] = '\0';
+
+        _disp->setCursor(24, 40);
+        _disp->print(buf2);
+      }
+
+    } else {
+      // STEP 4: Information Slide 2 (Typewriter reveal + 2.0s hold)
+      unsigned long s2Elapsed = elapsed - 4200;
+
+      _disp->drawRoundRect(6, 6, SCREEN_WIDTH - 12, 52, 4, SH110X_WHITE);
+
+      _disp->setTextSize(1);
+      _disp->setTextColor(SH110X_WHITE);
+
       const char* sub1 = "POWERED BY";
       int len1 = strlen(sub1);
-      int chars1 = (int)(p2Elapsed / 90); // 1 letter every 90ms
+      int chars1 = (int)(s2Elapsed / 35);
       if (chars1 > len1) chars1 = len1;
+      char buf1[12] = ""; strncpy(buf1, sub1, chars1); buf1[chars1] = '\0';
 
-      char buf1[12] = "";
-      strncpy(buf1, sub1, chars1);
-      buf1[chars1] = '\0';
-
-      _disp->setCursor(34, 20);
+      _disp->setCursor(34, 14);
       _disp->print(buf1);
-      if (chars1 < len1 && (p2Elapsed / 180) % 2 == 0) {
-        _disp->print("_");
-      }
 
-      // Line 2 Typewriter Reveal ("AJRGROUPS")
-      if (p2Elapsed > 900) {
-        unsigned long sub2Elapsed = p2Elapsed - 900;
-        const char* sub2 = "AJRGROUPS";
+      if (s2Elapsed > 300) {
+        unsigned long s2b = s2Elapsed - 300;
+        const char* sub2 = "AJR GROUPS";
         int len2 = strlen(sub2);
-        int chars2 = (int)(sub2Elapsed / 90);
+        int chars2 = (int)(s2b / 35);
         if (chars2 > len2) chars2 = len2;
+        char buf2[12] = ""; strncpy(buf2, sub2, chars2); buf2[chars2] = '\0';
 
-        char buf2[12] = "";
-        strncpy(buf2, sub2, chars2);
-        buf2[chars2] = '\0';
-
-        _disp->setCursor(24, 34);
+        _disp->setCursor(32, 27);
         _disp->print(buf2);
-        if (chars2 < len2 && (sub2Elapsed / 180) % 2 == 0) {
-          _disp->print("_");
-        }
       }
 
-      #if defined(SPEAKER_PIN)
-      static bool chimePlayed = false;
-      if (p2Elapsed > 200 && !chimePlayed) {
-        chimePlayed = true;
-        if (settings_get().soundMode != SOUND_MUTE) {
-          // Executive Corporate Arpeggio (C5 -> E5 -> G5 -> B5 -> C6)
-          tone(SPEAKER_PIN, 523, 60);  delay(65);  // C5
-          tone(SPEAKER_PIN, 659, 60);  delay(65);  // E5
-          tone(SPEAKER_PIN, 784, 60);  delay(65);  // G5
-          tone(SPEAKER_PIN, 988, 80);  delay(85);  // B5
-          tone(SPEAKER_PIN, 1046, 180);           // High C6 resolution tone
-        }
+      if (s2Elapsed > 650) {
+        unsigned long s2c = s2Elapsed - 650;
+        const char* sub3 = "AJR MART PRODUCT";
+        int len3 = strlen(sub3);
+        int chars3 = (int)(s2c / 30);
+        if (chars3 > len3) chars3 = len3;
+        char buf3[20] = ""; strncpy(buf3, sub3, chars3); buf3[chars3] = '\0';
+        _disp->setCursor(14, 41);
+        _disp->print(buf3);
       }
-      #endif
     }
 
     _disp->display();
@@ -658,140 +753,49 @@ void faces_playBootIntro() {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Boot sequence, stage 2: waving/handshake hand with a sales companion greeting.
-// ---------------------------------------------------------------------------
-void _drawWaveHand(int shear) {
-  int cx = SCREEN_WIDTH / 2;
-  int cy = SCREEN_HEIGHT / 2 + 2;
-  _disp->fillRoundRect(cx - 10 + shear / 2, cy - 4, 20, 22, 6, SH110X_WHITE);
-  _disp->fillRect(cx - 6 + shear / 2, cy + 16, 12, 10, SH110X_WHITE);
-  for (int i = 0; i < 4; i++) {
-    int fx = cx - 9 + i * 6 + shear;
-    _disp->fillRoundRect(fx, cy - 14, 5, 16, 2, SH110X_WHITE);
-  }
+void _drawWaveHand(int frameIndex) {
+  const uint8_t* frames[3] = { wave_hand_f0, wave_hand_f1, wave_hand_f2 };
+  int idx = abs(frameIndex) % 3;
+  int cx = (SCREEN_WIDTH - 24) / 2;
+  int cy = (SCREEN_HEIGHT - 24) / 2 - 2;
+  _disp->drawBitmap(cx, cy, frames[idx], 24, 24, SH110X_WHITE);
 }
 
 void faces_drawWave() {
   unsigned long now = millis();
-  float rock = sin(now / 220.0) * 10.0f;
+  int frame = (now / 130) % 3;
   _disp->clearDisplay();
-  _drawWaveHand((int)rock);
+  _drawWaveHand(frame);
   _disp->display();
 }
 
 void faces_playBootHandshake() {
-  const unsigned long DURATION = 5000;
+  const unsigned long DURATION = 3000;
   unsigned long start = millis();
   while (millis() - start < DURATION) {
     unsigned long elapsed = millis() - start;
-    float rock = sin(elapsed / 180.0) * 10.0f;
+    int frame = (elapsed / 130) % 3;
 
     _disp->clearDisplay();
+    _drawBorderSnake(elapsed, 12);
+    _drawWaveHand(frame);
 
-    if (elapsed < 1600) {
-      // Slide 1: Personalized Greeting - Hi Jayakumar ✨ (Typewriter reveal)
-      _drawWaveHand((int)rock);
+    char greetingBuf[32];
+    snprintf(greetingBuf, sizeof(greetingBuf), "Hi %s ", settings_get().userName);
+    int len = strlen(greetingBuf);
+    int chars = (int)(elapsed / 60);
+    if (chars > len) chars = len;
 
-      int starFrame = (elapsed / 150) % 2;
-      if (starFrame == 0) {
-        _disp->drawPixel(6, 6, SH110X_WHITE); _disp->drawPixel(122, 6, SH110X_WHITE);
-        _disp->drawPixel(8, 16, SH110X_WHITE); _disp->drawPixel(120, 16, SH110X_WHITE);
-      } else {
-        _disp->drawPixel(8, 4, SH110X_WHITE); _disp->drawPixel(120, 4, SH110X_WHITE);
-        _disp->drawPixel(6, 18, SH110X_WHITE); _disp->drawPixel(122, 18, SH110X_WHITE);
-      }
+    char buf[32] = "";
+    strncpy(buf, greetingBuf, chars);
+    buf[chars] = '\0';
 
-      const char* s1 = "Hi Jayakumar ";
-      int len = strlen(s1);
-      int chars = (int)(elapsed / 80);
-      if (chars > len) chars = len;
-
-      char buf[20] = "";
-      strncpy(buf, s1, chars);
-      buf[chars] = '\0';
-
-      _disp->setTextSize(1);
-      _disp->setCursor(14, 4);
-      _disp->print(buf);
-      if (chars == len) {
-        _disp->print(starFrame == 0 ? "*" : "+");
-      } else if ((elapsed / 160) % 2 == 0) {
-        _disp->print("_");
-      }
-
-    } else if (elapsed < 3200) {
-      // Slide 2: Sales pitch - Smart Desktop AI Companion (Typewriter reveal)
-      unsigned long s2Elapsed = elapsed - 1600;
-
-      const char* l1 = "Your Smart Desktop";
-      int len1 = strlen(l1);
-      int c1 = (int)(s2Elapsed / 60);
-      if (c1 > len1) c1 = len1;
-      char buf1[24] = ""; strncpy(buf1, l1, c1); buf1[c1] = '\0';
-
-      _disp->setTextSize(1);
-      _disp->setCursor(10, 14);
-      _disp->print(buf1);
-      if (c1 < len1 && (s2Elapsed / 120) % 2 == 0) _disp->print("_");
-
-      if (s2Elapsed > 700) {
-        unsigned long s2bElapsed = s2Elapsed - 700;
-        const char* l2 = "AI Companion!";
-        int len2 = strlen(l2);
-        int c2 = (int)(s2bElapsed / 60);
-        if (c2 > len2) c2 = len2;
-        char buf2[20] = ""; strncpy(buf2, l2, c2); buf2[c2] = '\0';
-
-        _disp->setCursor(22, 32);
-        _disp->print(buf2);
-        if (c2 < len2 && (s2bElapsed / 120) % 2 == 0) _disp->print("_");
-      }
-
-    } else {
-      // Slide 3: Sales pitch - Entertain, Assist & Remind On Time! (Typewriter reveal)
-      unsigned long s3Elapsed = elapsed - 3200;
-
-      const char* l1 = "Entertain & Assist";
-      int len1 = strlen(l1);
-      int c1 = (int)(s3Elapsed / 50);
-      if (c1 > len1) c1 = len1;
-      char buf1[24] = ""; strncpy(buf1, l1, c1); buf1[c1] = '\0';
-
-      _disp->setTextSize(1);
-      _disp->setCursor(4, 8);
-      _disp->print(buf1);
-      if (c1 < len1 && (s3Elapsed / 100) % 2 == 0) _disp->print("_");
-
-      if (s3Elapsed > 500) {
-        unsigned long s3b = s3Elapsed - 500;
-        const char* l2 = "& Remind You On";
-        int len2 = strlen(l2);
-        int c2 = (int)(s3b / 50);
-        if (c2 > len2) c2 = len2;
-        char buf2[20] = ""; strncpy(buf2, l2, c2); buf2[c2] = '\0';
-
-        _disp->setCursor(8, 24);
-        _disp->print(buf2);
-        if (c2 < len2 && (s3b / 100) % 2 == 0) _disp->print("_");
-      }
-
-      if (s3Elapsed > 1000) {
-        unsigned long s3c = s3Elapsed - 1000;
-        const char* l3 = "Right Time!";
-        int len3 = strlen(l3);
-        int c3 = (int)(s3c / 50);
-        if (c3 > len3) c3 = len3;
-        char buf3[20] = ""; strncpy(buf3, l3, c3); buf3[c3] = '\0';
-
-        _disp->setCursor(22, 40);
-        _disp->print(buf3);
-        if (c3 < len3 && (s3c / 100) % 2 == 0) _disp->print("_");
-      }
-    }
+    _disp->setTextSize(1);
+    _disp->setCursor(14, 4);
+    _disp->print(buf);
 
     _disp->display();
-    delay(25);
+    delay(20);
   }
 }
 
@@ -910,12 +914,27 @@ void faces_drawExpression(EyeMood mood) {
     _disp->drawCircleHelper(SCREEN_WIDTH / 2 + 4, MOUTH_Y - 3, 5, 8, SH110X_WHITE);
 
   } else if (mood == MOOD_LOVING) {
-    // Image 1: Dual heart eyes
-    _disp->fillRect(leftCx - EYE_W_DEFAULT / 2 - 1, EYE_CENTER_Y - EYE_H_DEFAULT / 2 - 1, EYE_W_DEFAULT + 2, EYE_H_DEFAULT + 2, SH110X_BLACK);
-    _disp->fillRect(rightCx - EYE_W_DEFAULT / 2 - 1, EYE_CENTER_Y - EYE_H_DEFAULT / 2 - 1, EYE_W_DEFAULT + 2, EYE_H_DEFAULT + 2, SH110X_BLACK);
-    _drawHeart(leftCx, EYE_CENTER_Y, 9);
-    _drawHeart(rightCx, EYE_CENTER_Y, 9);
-    _drawMouth(0.5f);
+    // 1. Clear eye background bounding boxes cleanly
+    _disp->fillRect(leftCx - EYE_W_DEFAULT / 2 - 2, EYE_CENTER_Y - EYE_H_DEFAULT / 2 - 2, EYE_W_DEFAULT + 4, EYE_H_DEFAULT + 4, SH110X_BLACK);
+    _disp->fillRect(rightCx - EYE_W_DEFAULT / 2 - 2, EYE_CENTER_Y - EYE_H_DEFAULT / 2 - 2, EYE_W_DEFAULT + 4, EYE_H_DEFAULT + 4, SH110X_BLACK);
+
+    // 2. Beating heart animation rhythm (alternates between 16x16 and 14x14 bitmaps)
+    int animPhase = (now / 200) % 4;
+    const uint8_t* heartBmp = (animPhase == 1 || animPhase == 3) ? heart_eye_14x14 : heart_eye_16x16;
+    int hW = 16;
+    int hH = (heartBmp == heart_eye_14x14) ? 14 : 16;
+
+    _disp->drawBitmap(leftCx - hW / 2, EYE_CENTER_Y - hH / 2, heartBmp, hW, hH, SH110X_WHITE);
+    _disp->drawBitmap(rightCx - hW / 2, EYE_CENTER_Y - hH / 2, heartBmp, hW, hH, SH110X_WHITE);
+
+    // 3. Render eyebrow arches above hearts
+    _drawBrows(leftCx, rightCx, EYE_CENTER_Y - 15, 0.0f);
+
+    // 4. Render cute blush cheeks
+    _drawBlush(leftCx, rightCx, EYE_CENTER_Y + 14);
+
+    // 5. Render smooth parabolic U-smile
+    _drawMouth(1.0f);
 
   } else if (mood == MOOD_WINK) {
     // Winking left eye (cute curved arc)

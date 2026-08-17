@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Linking, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Linking, Alert, Platform, StatusBar } from 'react-native';
 import { sendCommand } from '../services/commands';
 import { ensureNotificationPermission, startForwardingNotifications, stopForwardingNotifications, isForwarding } from '../services/notificationForwarder';
 import { theme } from '../theme';
@@ -7,6 +7,8 @@ import { theme } from '../theme';
 type Props = {
   deviceId: string;
 };
+
+const STATUSBAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 12 : 12;
 
 export default function NavigateScreen({ deviceId }: Props) {
   const [destination, setDestination] = useState('');
@@ -22,12 +24,17 @@ export default function NavigateScreen({ deviceId }: Props) {
       Alert.alert('Enter a destination', 'Type a place name or address first.');
       return;
     }
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(trimmed)}&travelmode=driving`;
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) {
-      Linking.openURL(url);
-    } else {
-      Alert.alert("Couldn't open Maps", 'Make sure Google Maps is installed.');
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(trimmed)}&travelmode=driving`;
+    const geoUrl = `geo:0,0?q=${encodeURIComponent(trimmed)}`;
+
+    try {
+      await Linking.openURL(mapsUrl);
+    } catch (e1) {
+      try {
+        await Linking.openURL(geoUrl);
+      } catch (e2) {
+        Alert.alert("Couldn't open Maps", 'Could not launch Google Maps or web browser.');
+      }
     }
   }
 
@@ -43,7 +50,7 @@ export default function NavigateScreen({ deviceId }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={[styles.container, { paddingTop: STATUSBAR_HEIGHT }]}>
       <Text style={styles.title}>GPS NAVIGATION MIRROR</Text>
       <Text style={styles.sub}>
         Route Google Maps turn-by-turn navigation arrows directly onto NANA's OLED screen in real-time.

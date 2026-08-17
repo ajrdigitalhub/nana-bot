@@ -158,11 +158,15 @@ inline void dino_startNewGame() {
 
 inline void dino_jump() {
   if (_isGameOver) {
+    if (_highScore > settings_get().dinoHighScore) {
+      settings_get().dinoHighScore = _highScore;
+      settings_save();
+    }
     dino_startNewGame();
     return;
   }
   if (_eleGrounded) {
-    _eleVy = -6.2f; // Jump force
+    _eleVy = -6.4f; // Responsive smooth jump force
     _eleGrounded = false;
     dino_playJumpSound();
   }
@@ -232,7 +236,7 @@ inline void dino_update() {
 
   unsigned long now = millis();
   float dt = (now - _lastFrameMs) / 1000.0f;
-  if (dt <= 0.0f) dt = 0.02f;
+  if (dt <= 0.0f || dt > 0.08f) dt = 0.025f;
   _lastFrameMs = now;
 
   // 1. Gravity & Physics
@@ -280,7 +284,6 @@ inline void dino_update() {
         if (_score > _highScore) {
           _highScore = _score;
           settings_get().dinoHighScore = _highScore;
-          settings_save();
         }
         return;
       }

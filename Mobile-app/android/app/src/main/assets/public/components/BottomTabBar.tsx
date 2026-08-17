@@ -2,7 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { theme } from '../theme';
 
-export type Tab = 'home' | 'chatbot' | 'navigate' | 'games' | 'settings';
+export type Tab = 'home' | 'chatbot' | 'reminders' | 'navigate' | 'games' | 'settings';
 
 type Props = {
   active: Tab;
@@ -12,6 +12,7 @@ type Props = {
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'home', label: 'Home', icon: '🏠' },
   { key: 'chatbot', label: 'Chatbot', icon: '💬' },
+  { key: 'reminders', label: 'Alarms', icon: '⏰' },
   { key: 'navigate', label: 'Navigate', icon: '🗺️' },
   { key: 'games', label: 'Arcade', icon: '🎮' },
   { key: 'settings', label: 'Settings', icon: '⚙️' },
@@ -45,11 +46,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.card,
     paddingTop: 8,
     paddingBottom: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 6,
   },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: theme.controlRadius },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 4, borderRadius: theme.controlRadius },
   tabActive: { backgroundColor: theme.colors.accentBg },
   icon: { fontSize: 16, marginBottom: 2 },
-  label: { fontSize: 11, fontWeight: '500', color: theme.colors.textMuted },
+  label: { fontSize: 10, fontWeight: '500', color: theme.colors.textMuted },
   labelActive: { color: theme.colors.accent, fontWeight: '700' },
 });

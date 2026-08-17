@@ -7,6 +7,9 @@ import {
   ScrollView,
   Switch,
   Alert,
+  Platform,
+  StatusBar,
+  TextInput,
 } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import {
@@ -28,6 +31,8 @@ type Props = {
   onUnpair?: () => void;
 };
 
+const STATUSBAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 36) + 16 : 16;
+
 const DEFAULT_SETTINGS: DeviceSettings = {
   idleMin: 5,
   use24h: true,
@@ -36,6 +41,7 @@ const DEFAULT_SETTINGS: DeviceSettings = {
   waterMin: 0,
   mealHr: 0,
   dinoHi: 0,
+  userName: 'JK',
 };
 
 export default function SettingsScreen({ deviceId, onUnpair }: Props) {
@@ -44,12 +50,16 @@ export default function SettingsScreen({ deviceId, onUnpair }: Props) {
   const [forwarding, setForwarding] = useState(false);
   const [hapticFeedback, setHapticFeedback] = useState(true);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [userNameInput, setUserNameInput] = useState('JK');
 
   useEffect(() => {
     const unsubStatus = watchDeviceStatus(deviceId, setStatus);
     const unsubSettings = watchDeviceSettings(deviceId, (retrieved) => {
       if (retrieved) {
         setDeviceSettings((prev) => ({ ...prev, ...retrieved }));
+        if (retrieved.userName) {
+          setUserNameInput(retrieved.userName);
+        }
       }
     });
     setForwarding(isForwarding());
@@ -104,7 +114,7 @@ export default function SettingsScreen({ deviceId, onUnpair }: Props) {
   const isOnline = Boolean(status && (status.online || (status.lastSeen && status.lastSeen > 0)));
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={[styles.container, { paddingTop: STATUSBAR_HEIGHT }]}>
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -131,6 +141,45 @@ export default function SettingsScreen({ deviceId, onUnpair }: Props) {
         <Text style={styles.sectionDesc}>
           Configures preferences directly saved in hardware flash memory on device {deviceId}.
         </Text>
+
+        {/* User Name Config */}
+        <View style={styles.settingRow}>
+          <Text style={styles.settingLabel}>👤 User Name (Displayed on Robot Startup)</Text>
+          <Text style={styles.settingSubLabel}>Current Greeting: Hi {deviceSettings.userName || 'JK'}</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+            <TextInput
+              style={{
+                flex: 1,
+                backgroundColor: '#1E293B',
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: '#334155',
+                color: '#F8FAFC',
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                fontSize: 13,
+                fontWeight: '600',
+              }}
+              value={userNameInput}
+              onChangeText={setUserNameInput}
+              placeholder="Enter name (e.g. JK)"
+              placeholderTextColor="#64748B"
+              maxLength={14}
+            />
+            <TouchableOpacity
+              style={{
+                backgroundColor: theme.colors.accent,
+                borderRadius: 10,
+                paddingHorizontal: 16,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={() => handleUpdate({ userName: userNameInput.trim() || 'JK' })}
+            >
+              <Text style={{ color: '#0F172A', fontWeight: '800', fontSize: 12 }}>SAVE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Sound Mode */}
         <View style={styles.settingRow}>

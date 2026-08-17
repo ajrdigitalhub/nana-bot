@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, StatusBar } from 'react-native';
 import auth from '@react-native-firebase/auth';
 
+import IntroSplashScreen from './src/components/IntroSplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import PairingScreen, { getSavedDeviceId, clearSavedDeviceId } from './src/screens/PairingScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import RemindersScreen from './src/screens/RemindersScreen';
 import NavigateScreen from './src/screens/NavigateScreen';
 import GamesScreen from './src/screens/GamesScreen';
 import DoodleScreen from './src/screens/DoodleScreen';
@@ -17,6 +19,7 @@ import { theme } from './src/theme';
 type Screen = 'loading' | 'login' | 'pairing' | 'paired';
 
 export default function App() {
+  const [showIntro, setShowIntro] = useState(true);
   const [screen, setScreen] = useState<Screen>('loading');
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('home');
@@ -36,13 +39,11 @@ export default function App() {
       }
       const saved = await getSavedDeviceId();
       if (saved) {
-        // Live startup verification check: Ensure device exists & is online in Firebase
         const status = await checkDeviceExists(saved);
         if (status.exists && status.online) {
           setDeviceId(saved);
           setScreen('paired');
         } else {
-          // Device is offline or un-registered — clear stored ID and force pairing screen
           await clearSavedDeviceId();
           setScreen('pairing');
         }
@@ -53,32 +54,39 @@ export default function App() {
     return unsubscribe;
   }, []);
 
+  if (showIntro) {
+    return <IntroSplashScreen onFinish={() => setShowIntro(false)} />;
+  }
+
   if (screen === 'loading') {
     return (
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', backgroundColor: theme.colors.bg }}>
-        <ActivityIndicator size="large" color={theme.colors.accent} />
-      </SafeAreaView>
+      <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+        <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+        <IntroSplashScreen onFinish={() => setScreen('pairing')} />
+      </View>
     );
   }
 
   if (screen === 'login') {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+        <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
         <LoginScreen onSignedIn={() => setScreen('pairing')} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (screen === 'pairing') {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+        <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
         <PairingScreen
           onPaired={(id) => {
             setDeviceId(id);
             setScreen('paired');
           }}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -87,14 +95,16 @@ export default function App() {
 
   if (doodleOpen) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+        <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
         <DoodleScreen deviceId={deviceId} onDone={() => setDoodleOpen(false)} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       {activeTab === 'home' && (
         <HomeScreen 
           deviceId={deviceId} 
@@ -103,12 +113,13 @@ export default function App() {
         />
       )}
       {activeTab === 'chatbot' && <ChatbotScreen deviceId={deviceId} />}
+      {activeTab === 'reminders' && <RemindersScreen deviceId={deviceId} />}
       {activeTab === 'navigate' && <NavigateScreen deviceId={deviceId} />}
       {activeTab === 'games' && <GamesScreen deviceId={deviceId} />}
       {activeTab === 'settings' && (
         <SettingsScreen deviceId={deviceId} onUnpair={handleUnpair} />
       )}
       <BottomTabBar active={activeTab} onChange={setActiveTab} />
-    </SafeAreaView>
+    </View>
   );
 }

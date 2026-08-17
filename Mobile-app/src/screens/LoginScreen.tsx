@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import { theme } from '../theme';
 
@@ -133,168 +133,173 @@ export default function LoginScreen({ onSignedIn }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-      <View style={styles.card}>
-        <Text style={styles.brandTitle}>NANA AI ROBOT</Text>
-        <Text style={styles.brandSub}>Enterprise Sales & Remote Control Portal</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: theme.colors.bg }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        <View style={styles.card}>
+          <Text style={styles.brandTitle}>NANA AI ROBOT</Text>
+          <Text style={styles.brandSub}>Enterprise Sales & Remote Control Portal</Text>
 
-        {/* Auth Provider Switcher Tabs */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, authMode === 'phone' && styles.tabActive]}
-            onPress={() => { setAuthMode('phone'); setErrorMessage(null); }}
-          >
-            <Text style={[styles.tabText, authMode === 'phone' && styles.tabTextActive]}>📲 Phone</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, authMode === 'email' && styles.tabActive]}
-            onPress={() => { setAuthMode('email'); setErrorMessage(null); }}
-          >
-            <Text style={[styles.tabText, authMode === 'email' && styles.tabTextActive]}>✉️ Email</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, authMode === 'guest' && styles.tabActive]}
-            onPress={() => { setAuthMode('guest'); setErrorMessage(null); }}
-          >
-            <Text style={[styles.tabText, authMode === 'guest' && styles.tabTextActive]}>⚡ Guest</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Error / Diagnostic Alert Box */}
-        {errorMessage && (
-          <View style={[styles.errorBox, isConfigError && styles.configErrorBox]}>
-            <Text style={styles.errorTitle}>
-              {isConfigError ? '⚙️ Firebase Config Notice' : '⚠️ Authentication Error'}
-            </Text>
-            <Text style={styles.errorText}>{errorMessage}</Text>
-            {isConfigError && (
-              <View style={styles.helpBox}>
-                <Text style={styles.helpText}>
-                  • Enable Phone/Email Provider in Firebase Console → Authentication → Sign-in Method.
-                </Text>
-                <TouchableOpacity style={styles.guestBypassBtn} onPress={handleGuestSignIn}>
-                  <Text style={styles.guestBypassText}>⚡ Skip & Continue as Guest</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+          {/* Auth Provider Switcher Tabs */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, authMode === 'phone' && styles.tabActive]}
+              onPress={() => { setAuthMode('phone'); setErrorMessage(null); }}
+            >
+              <Text style={[styles.tabText, authMode === 'phone' && styles.tabTextActive]}>📲 Phone</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, authMode === 'email' && styles.tabActive]}
+              onPress={() => { setAuthMode('email'); setErrorMessage(null); }}
+            >
+              <Text style={[styles.tabText, authMode === 'email' && styles.tabTextActive]}>✉️ Email</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, authMode === 'guest' && styles.tabActive]}
+              onPress={() => { setAuthMode('guest'); setErrorMessage(null); }}
+            >
+              <Text style={[styles.tabText, authMode === 'guest' && styles.tabTextActive]}>⚡ Guest</Text>
+            </TouchableOpacity>
           </View>
-        )}
 
-        {/* Phone Auth View */}
-        {authMode === 'phone' && (
-          !confirm ? (
+          {/* Error / Diagnostic Alert Box */}
+          {errorMessage && (
+            <View style={[styles.errorBox, isConfigError && styles.configErrorBox]}>
+              <Text style={styles.errorTitle}>
+                {isConfigError ? '⚙️ Firebase Config Notice' : '⚠️ Authentication Error'}
+              </Text>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+              {isConfigError && (
+                <View style={styles.helpBox}>
+                  <Text style={styles.helpText}>
+                    • Enable Phone/Email Provider in Firebase Console → Authentication → Sign-in Method.
+                  </Text>
+                  <TouchableOpacity style={styles.guestBypassBtn} onPress={handleGuestSignIn}>
+                    <Text style={styles.guestBypassText}>⚡ Skip & Continue as Guest</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Phone Auth View */}
+          {authMode === 'phone' && (
+            !confirm ? (
+              <>
+                <Text style={styles.label}>ENTER YOUR PHONE NUMBER</Text>
+                <TextInput
+                  style={styles.input}
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  placeholder="+91 98765 43210"
+                  placeholderTextColor={theme.colors.textMuted}
+                />
+                <TouchableOpacity style={styles.button} onPress={sendCode} disabled={sending}>
+                  {sending ? (
+                    <ActivityIndicator color={theme.colors.accent} size="small" />
+                  ) : (
+                    <Text style={styles.buttonText}>📲 Send Verification Code</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.label}>ENTER VERIFICATION CODE (OTP: 12345)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={code}
+                  onChangeText={setCode}
+                  keyboardType="number-pad"
+                  placeholder="12345"
+                  placeholderTextColor={theme.colors.textMuted}
+                />
+                <TouchableOpacity style={styles.button} onPress={verifyCode} disabled={sending}>
+                  {sending ? (
+                    <ActivityIndicator color={theme.colors.accent} size="small" />
+                  ) : (
+                    <Text style={styles.buttonText}>🔒 Verify & Access Device</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.secondaryLink}
+                  onPress={() => { setConfirm(null); setCode(''); }}
+                >
+                  <Text style={styles.secondaryLinkText}>← Use a different phone number</Text>
+                </TouchableOpacity>
+              </>
+            )
+          )}
+
+          {/* Email Auth View */}
+          {authMode === 'email' && (
             <>
-              <Text style={styles.label}>ENTER YOUR PHONE NUMBER</Text>
+              <Text style={styles.label}>EMAIL ADDRESS</Text>
               <TextInput
                 style={styles.input}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                placeholder="+91 98765 43210"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholder="user@example.com"
                 placeholderTextColor={theme.colors.textMuted}
               />
-              <TouchableOpacity style={styles.button} onPress={sendCode} disabled={sending}>
+              <Text style={styles.label}>PASSWORD</Text>
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                placeholder="••••••••"
+                placeholderTextColor={theme.colors.textMuted}
+              />
+              <TouchableOpacity style={styles.button} onPress={handleEmailAuth} disabled={sending}>
                 {sending ? (
                   <ActivityIndicator color={theme.colors.accent} size="small" />
                 ) : (
-                  <Text style={styles.buttonText}>📲 Send Verification Code</Text>
-                )}
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Text style={styles.label}>ENTER VERIFICATION CODE (OTP: 12345)</Text>
-              <TextInput
-                style={styles.input}
-                value={code}
-                onChangeText={setCode}
-                keyboardType="number-pad"
-                placeholder="12345"
-                placeholderTextColor={theme.colors.textMuted}
-              />
-              <TouchableOpacity style={styles.button} onPress={verifyCode} disabled={sending}>
-                {sending ? (
-                  <ActivityIndicator color={theme.colors.accent} size="small" />
-                ) : (
-                  <Text style={styles.buttonText}>🔒 Verify & Access Device</Text>
+                  <Text style={styles.buttonText}>
+                    {isRegistering ? '📝 Create Account & Access' : '🔐 Sign In with Email'}
+                  </Text>
                 )}
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.secondaryLink}
-                onPress={() => { setConfirm(null); setCode(''); }}
+                onPress={() => setIsRegistering(!isRegistering)}
               >
-                <Text style={styles.secondaryLinkText}>← Use a different phone number</Text>
+                <Text style={styles.secondaryLinkText}>
+                  {isRegistering ? 'Already have an account? Sign In' : "Don't have an account? Register"}
+                </Text>
               </TouchableOpacity>
             </>
-          )
-        )}
+          )}
 
-        {/* Email Auth View */}
-        {authMode === 'email' && (
-          <>
-            <Text style={styles.label}>EMAIL ADDRESS</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              placeholder="user@example.com"
-              placeholderTextColor={theme.colors.textMuted}
-            />
-            <Text style={styles.label}>PASSWORD</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholder="••••••••"
-              placeholderTextColor={theme.colors.textMuted}
-            />
-            <TouchableOpacity style={styles.button} onPress={handleEmailAuth} disabled={sending}>
-              {sending ? (
-                <ActivityIndicator color={theme.colors.accent} size="small" />
-              ) : (
-                <Text style={styles.buttonText}>
-                  {isRegistering ? '📝 Create Account & Access' : '🔐 Sign In with Email'}
-                </Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.secondaryLink}
-              onPress={() => setIsRegistering(!isRegistering)}
-            >
-              <Text style={styles.secondaryLinkText}>
-                {isRegistering ? 'Already have an account? Sign In' : "Don't have an account? Register"}
+          {/* Guest Auth View */}
+          {authMode === 'guest' && (
+            <View style={styles.guestContainer}>
+              <Text style={styles.guestHint}>
+                Quickly connect and control NANA AI Robot as a guest using Firebase Anonymous Authentication.
               </Text>
-            </TouchableOpacity>
-          </>
-        )}
+              <TouchableOpacity style={styles.guestButton} onPress={handleGuestSignIn} disabled={sending}>
+                {sending ? (
+                  <ActivityIndicator color={theme.colors.purple} size="small" />
+                ) : (
+                  <Text style={styles.guestButtonText}>⚡ Instant Guest Access</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
 
-        {/* Guest Auth View */}
-        {authMode === 'guest' && (
-          <View style={styles.guestContainer}>
-            <Text style={styles.guestHint}>
-              Quickly connect and control NANA AI Robot as a guest using Firebase Anonymous Authentication.
-            </Text>
-            <TouchableOpacity style={styles.guestButton} onPress={handleGuestSignIn} disabled={sending}>
-              {sending ? (
-                <ActivityIndicator color={theme.colors.purple} size="small" />
-              ) : (
-                <Text style={styles.guestButtonText}>⚡ Instant Guest Access</Text>
-              )}
+          {/* Footer Quick Guest Button */}
+          {authMode !== 'guest' && (
+            <TouchableOpacity style={styles.footerGuestLink} onPress={handleGuestSignIn}>
+              <Text style={styles.footerGuestText}>⚡ Or Continue as Guest (Quick Access)</Text>
             </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Footer Quick Guest Button */}
-        {authMode !== 'guest' && (
-          <TouchableOpacity style={styles.footerGuestLink} onPress={handleGuestSignIn}>
-            <Text style={styles.footerGuestText}>⚡ Or Continue as Guest (Quick Access)</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </ScrollView>
+          )}
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

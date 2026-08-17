@@ -55,6 +55,10 @@
 #include "faces.h"
 #include "dino_game.h"
 
+// Forward declarations
+void pushGameResult(int reactionMs, bool tooSoon);
+void startReactionGame();
+
 // ---------------------------------------------------------------------------
 // Globals
 // ---------------------------------------------------------------------------
@@ -87,6 +91,15 @@ enum DeviceState {
   STATE_FOOD_REMINDER,  // Steaming meal plate & meal time alert
   STATE_CHAT_MESSAGE   // Animated chat bubble message display
 };
+
+enum FirmwareOperatingMode {
+  NORMAL_MODE,
+  GAME_MODE,
+  GAME_COMPLETED,
+  GAME_EXIT
+};
+
+FirmwareOperatingMode currentOpMode = NORMAL_MODE;
 
 DeviceState currentState = STATE_BOOT;
 unsigned long stateEnteredAt = 0;
@@ -197,30 +210,37 @@ void setup() {
 // Main loop
 // ---------------------------------------------------------------------------
 void loop() {
-  // Skip background network polling during active gameplay to eliminate HTTP stalls
-  if (currentState != STATE_DINO_GAME) {
+  // During NORMAL_MODE: background tasks execute normally.
+  // During GAME_MODE: non-critical background tasks (WiFi maintenance, weather updates,
+  // periodic status pushes, reminder calculations) are temporarily paused so 100% CPU
+  // is dedicated to game physics, inputs, and 40 FPS rendering!
+  if (currentOpMode == NORMAL_MODE && currentState != STATE_DINO_GAME) {
     maintainWiFi();
     maintainWeather();
     #if FEATURE_FIREBASE
     pushStatusPeriodically();
-    pollForCommands();
     #endif
     checkPeriodicReminders();
   }
+
+  #if FEATURE_FIREBASE
+  pollForCommands();
+  #endif
 
   #if FEATURE_TOUCH
   handleTouchEvent(touch_update());
   #endif
   updateStateMachine();
-  renderCurrentState();
 
-  // Smooth non-blocking 60FPS frame pacing (~16ms per frame)
-  static unsigned long lastLoopMs = 0;
-  unsigned long elapsed = millis() - lastLoopMs;
-  if (elapsed < 16) {
-    delay(16 - elapsed);
+  // Smooth non-blocking 40FPS frame pacing (~25ms per display refresh)
+  static unsigned long lastRenderMs = 0;
+  unsigned long now = millis();
+  if (now - lastRenderMs >= 25) {
+    lastRenderMs = now;
+    renderCurrentState();
   }
-  lastLoopMs = millis();
+
+  delay(1); // Yield to ESP32 FreeRTOS tasks & Watchdog
 }
 
 // ---------------------------------------------------------------------------
@@ -496,7 +516,14 @@ void pushStatusNow() {
 void pollForCommands() {
   if (WiFi.status() != WL_CONNECTED) return;
 
-  // 1. Process active Realtime SSE Stream push events immediately (< 1ms execution time)
+  // Pause all network stream reading & SSL cache management during active GAME_MODE.
+  // Gives 100% CPU priority to 50 FPS OLED game physics & zero-latency touch jumping!
+  // Automatically resumes 100% when exiting game mode.
+  if (currentState == STATE_DINO_GAME || currentOpMode == GAME_MODE) return;
+
+  unsigned long now = millis();
+
+  // 1. Process active Realtime SSE Stream push events immediately
   if (Firebase.ready() && Firebase.RTDB.readStream(&fbdoStream)) {
     if (fbdoStream.streamAvailable()) {
       String raw = fbdoStream.stringData();
@@ -513,9 +540,10 @@ void pollForCommands() {
     }
   }
 
-  // 2. Direct REST Cloud Command Fetch (every 2.5s - ultra-fast & socket-safe)
-  unsigned long now = millis();
-  if (now - lastCommandPollAt >= 2500) {
+  // 2. Direct REST Cloud Command Fallback (skipped during active gameplay to prevent 1.5s CPU stalls)
+  if (currentState == STATE_DINO_GAME) return;
+
+  if (now - lastCommandPollAt >= 3500) { // every 3.5s background poll
     lastCommandPollAt = now;
     
     WiFiClientSecure client;
@@ -523,7 +551,7 @@ void pollForCommands() {
     HTTPClient http;
     static String commandUrl = String(FIREBASE_RTDB_URL) + "/devices/" + deviceId + "/commands/current.json";
     http.begin(client, commandUrl);
-    http.setTimeout(1500);
+    http.setTimeout(400); // 400ms max timeout to prevent lagging
     int code = http.GET();
     if (code == 200) {
       String raw = http.getString();
@@ -581,6 +609,21 @@ void pushStatusPeriodically() {
     }
     http.end();
   }
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp-Style Dual Pop Chat Message Audio Alert Chime
+// ---------------------------------------------------------------------------
+inline void playChatMessageAlertSound() {
+  if (settings_get().soundMode == SOUND_MUTE) return;
+
+  // WhatsApp-style dual pop notification chime (E6 -> B6 pitch sweep)
+  int pitch1 = (settings_get().soundMode == SOUND_QUIET) ? 659 : 1318; // E6
+  int pitch2 = (settings_get().soundMode == SOUND_QUIET) ? 987 : 1975; // B6
+
+  tone(SPEAKER_PIN, pitch1, 45);
+  delay(55);
+  tone(SPEAKER_PIN, pitch2, 85);
 }
 
 // ---------------------------------------------------------------------------
@@ -696,10 +739,28 @@ void handleIncomingMessage(const String &msg) {
     String action = doc["action"] | "";
     Serial.print(" -> Game Action: ");
     Serial.println(action);
-    if (action == "start") startReactionGame();
-    else if (action == "dino" || action == "runner") {
+    if (action == "start") {
+      startReactionGame();
+    } else if (action == "dino" || action == "runner") {
       dino_startNewGame();
       transitionTo(STATE_DINO_GAME, 0);
+    } else if (action == "jump") {
+      if (currentState == STATE_DINO_GAME) {
+        dino_jump();
+      } else if (currentState == STATE_GAME_READY || currentState == STATE_GAME_GO) {
+        if (currentState == STATE_GAME_READY) {
+          gameLastTooSoon = true;
+          gameLastReactionMs = 0;
+          transitionTo(STATE_GAME_RESULT, 4000);
+        } else if (currentState == STATE_GAME_GO) {
+          gameLastTooSoon = false;
+          gameLastReactionMs = millis() - gameGoAt;
+          transitionTo(STATE_GAME_RESULT, 4000);
+          pushGameResult(gameLastReactionMs, false);
+        }
+      }
+    } else if (action == "quit" || action == "exit") {
+      transitionTo(STATE_IDLE, 0);
     }
 
   } else if (type == "dino" || type == "runner") {
@@ -726,6 +787,10 @@ void handleIncomingMessage(const String &msg) {
     if (doc.containsKey("sndMode")) st.soundMode = (SoundMode)doc["sndMode"].as<int>();
     if (doc.containsKey("waterMin")) st.waterReminderMinutes = doc["waterMin"].as<int>();
     if (doc.containsKey("mealHr")) st.mealReminderHours = doc["mealHr"].as<int>();
+    if (doc.containsKey("userName")) {
+      const char* nameStr = doc["userName"] | "JK";
+      snprintf(st.userName, sizeof(st.userName), "%s", nameStr);
+    }
     if (doc.containsKey("resetHigh") && doc["resetHigh"].as<bool>() == true) st.dinoHighScore = 0;
     settings_save();
     Serial.println(" -> Hardware flash preferences updated & saved!");
@@ -742,6 +807,8 @@ void handleIncomingMessage(const String &msg) {
     Serial.print("', ID='");
     Serial.print(msgId);
     Serial.println("'");
+
+    playChatMessageAlertSound(); // WhatsApp-style double-pop sound chime alert!
 
     pendingChatMessage = text;
     pendingChatMsgId = msgId;
@@ -951,16 +1018,19 @@ void checkPeriodicReminders() {
 void handleSettingsTouch(TouchEvent ev) {
   if (ev == TOUCH_SINGLE_TAP) {
     if (!isSubOptionOpen) {
-      // Level 1: Scroll through main menu options
+      // Level 1: Scroll through main menu options reliably
       settingsMenuIndex = (settingsMenuIndex + 1) % SETTINGS_ITEM_COUNT;
     } else {
       // Level 2: Sub-Option Value Editor -> Cycle/change option value
-      if (settingsMenuIndex == 1) settings_cycleSoundMode();
-      else if (settingsMenuIndex == 2) settings_cycleIdleTimeout();
-      else if (settingsMenuIndex == 3) settings_toggleTimeFormat();
-      else if (settingsMenuIndex == 4) settings_cycleTapAction();
-      else if (settingsMenuIndex == 5) settings_cycleWaterReminder();
-      else if (settingsMenuIndex == 6) settings_cycleMealReminder();
+      switch (settingsMenuIndex) {
+        case 1: settings_cycleSoundMode(); break;
+        case 2: settings_cycleIdleTimeout(); break;
+        case 3: settings_toggleTimeFormat(); break;
+        case 4: settings_cycleTapAction(); break;
+        case 5: settings_cycleWaterReminder(); break;
+        case 6: settings_cycleMealReminder(); break;
+        default: break;
+      }
     }
 
   } else if (ev == TOUCH_DOUBLE_TAP) {
@@ -979,7 +1049,8 @@ void handleSettingsTouch(TouchEvent ev) {
       settings_save();
     }
 
-  } else if (ev == TOUCH_LONG_PRESS) {
+  } else if (ev == TOUCH_LONG_PRESS || ev == TOUCH_HOLD_3SEC) {
+    // Long press or 3-second hold from anywhere in Settings -> Save & Exit to Idle!
     isSubOptionOpen = false;
     settings_save();
     transitionTo(STATE_IDLE, 0);
@@ -1035,8 +1106,10 @@ void handleTouchEvent(TouchEvent ev) {
     return;
   }
 
-  // Long press while idle / active -> open settings menu
-  if (ev == TOUCH_LONG_PRESS) {
+  // Long press or 3-sec hold while idle / active -> open settings menu
+  if (ev == TOUCH_LONG_PRESS || ev == TOUCH_HOLD_3SEC) {
+    settingsMenuIndex = 0;
+    isSubOptionOpen = false;
     transitionTo(STATE_SETTINGS, 0);
     return;
   }
@@ -1046,6 +1119,15 @@ void handleTouchEvent(TouchEvent ev) {
 // State machine
 // ---------------------------------------------------------------------------
 void transitionTo(DeviceState next, unsigned long durationMs) {
+  if (next == STATE_DINO_GAME) {
+    currentOpMode = GAME_MODE;
+  } else if (currentState == STATE_DINO_GAME && next != STATE_DINO_GAME) {
+    currentOpMode = GAME_EXIT;
+    currentOpMode = NORMAL_MODE; // Automatically resume all background tasks!
+  } else {
+    currentOpMode = NORMAL_MODE;
+  }
+
   currentState = next;
   stateEnteredAt = millis();
   temporaryStateDurationMs = durationMs;
@@ -1054,10 +1136,6 @@ void transitionTo(DeviceState next, unsigned long durationMs) {
     isSubOptionOpen = false;
   }
 
-  // Every time we settle into idle — regardless of what path got us
-  // here — the auto-expression timer restarts fresh. This guarantees a
-  // full randomized wait rather than firing immediately off a stale
-  // schedule left over from before some other state interrupted it.
   if (next == STATE_IDLE) {
     scheduleNextAutoExpression();
   }

@@ -8,6 +8,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
+  Keyboard,
 } from 'react-native';
 import {
   sendCommand,
@@ -20,6 +22,8 @@ import { theme } from '../theme';
 type Props = {
   deviceId: string;
 };
+
+const STATUSBAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 36) + 16 : 16;
 
 type ChatMessage = {
   id: string;
@@ -80,6 +84,18 @@ export default function ChatbotScreen({ deviceId }: Props) {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
   }, [messages]);
+
+  useEffect(() => {
+    // Scroll to bottom when soft keyboard opens
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+    });
+    return () => {
+      showSub.remove();
+    };
+  }, []);
 
   const handleInputChange = (text: string) => {
     setInputText(text);
@@ -266,10 +282,10 @@ export default function ChatbotScreen({ deviceId }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Header Bar */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: STATUSBAR_HEIGHT }]}>
         <View>
           <Text style={styles.headerTitle}>NANA AI CHATBOT</Text>
           <Text style={styles.headerSub}>Control & Message Device: {deviceId}</Text>
